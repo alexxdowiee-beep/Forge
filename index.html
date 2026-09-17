@@ -827,6 +827,9 @@
   var ROUTINE_ORDER = ["Quick", "Warm Up", "Push", "Pull", "Legs", "Full Body", "Cardio", "Stretch"];
   var REST_SECONDS = 90;
 
+  // resolved up front: boot can render synchronously when no cloud storage exists
+  var view = document.getElementById("view");
+
   /* ============ state ============ */
   var state = {
     tab: "home",
@@ -1114,7 +1117,6 @@
 
 
   /* ============ render root ============ */
-  var view = document.getElementById("view");
   function render() {
     updateTopbar();
     var tabChanged = state.lastTab !== state.tab;
