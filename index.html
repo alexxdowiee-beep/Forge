@@ -971,7 +971,7 @@
   }
 
   if (window.claude && typeof window.claude.use === "function") initDb();
-  else { localLoad(); state.dbAvailable = false; render(); restoreDraft(); }
+  else { localLoad(); loadGoalsLocal(); state.dbAvailable = false; render(); restoreDraft(); }
 
   /* ============ helpers ============ */
   function exerciseDef(name) {
@@ -1036,6 +1036,13 @@
       }
     }
     return null;
+  }
+  // how many sets to show when the workout doesn't have an explicit override yet -
+  // mirrors last session's set count so today defaults to matching your last effort
+  function defaultPlannedSets(ex, last, hold) {
+    if (last === undefined) last = findLastInstance(ex.name);
+    if (hold === undefined) hold = isHold(ex.name);
+    return (last ? last.sets.length : (hold ? 1 : 3)) || (hold ? 1 : 3);
   }
   function allExerciseNames() {
     var set = {};
@@ -1119,12 +1126,12 @@
 
   /* ============ render root ============ */
   function render() {
-    updateTopbar();
-    var tabChanged = state.lastTab !== state.tab;
-    state.lastTab = state.tab;
     var oldBar = document.querySelector(".resume-bar");
     if (oldBar) oldBar.remove();
     try {
+      updateTopbar();
+      var tabChanged = state.lastTab !== state.tab;
+      state.lastTab = state.tab;
       if (state.finishSummary) { renderFinishOverlay(); return; }
       if (state.activeWorkout && state.viewingWorkout) { renderWorkoutScreen(); return; }
       stopElapsedTimer();
@@ -1134,15 +1141,16 @@
       else if (state.tab === "goals") renderGoals();
       else renderProgress();
     } catch (err) {
-      // TEMPORARY diagnostic: surface the crash instead of leaving a blank,
-      // unresponsive screen, so we can see exactly what's failing on real data.
+      // Something failed while building this screen. Keep the full detail in
+      // the console for debugging, but show a plain, recoverable message
+      // instead of leaving a blank, unresponsive page.
       console.error("Forge render error:", err);
-      view.innerHTML = '<div class="card" style="border-color:var(--danger, #FF5F5F)">' +
-        '<div style="font-weight:700;margin-bottom:8px">Something broke while rendering this screen</div>' +
-        '<div style="font-family:monospace;font-size:12px;white-space:pre-wrap;color:var(--muted)">' +
-        escapeHtml((err && err.message) || String(err)) +
-        (err && err.stack ? '\n\n' + escapeHtml(err.stack) : '') +
-        '</div></div>';
+      view.innerHTML = '<div class="empty-state">' +
+        '<p>Something went wrong loading this screen. Your data is safe — nothing was lost.</p>' +
+        '<button class="secondary" id="errReloadBtn">Reload</button>' +
+        '</div>';
+      var errBtn = document.getElementById("errReloadBtn");
+      if (errBtn) errBtn.addEventListener("click", function () { location.reload(); });
       return;
     }
     if (tabChanged) {
@@ -1489,7 +1497,7 @@
 
     document.getElementById("startBtn").addEventListener("click", function () {
       if (state.activeWorkout) { state.viewingWorkout = true; render(); return; }
-      var exList = (ROUTINES[state.selectedRoutine] || []).map(function (name) { return { name: name, muscle: muscleOf(name), sets: [], plannedSets: isHold(name) ? 1 : 3 }; });
+      var exList = (ROUTINES[state.selectedRoutine] || []).map(function (name) { return { name: name, muscle: muscleOf(name), sets: [] }; });
       state.activeWorkout = { date: new Date().toISOString(), startedAt: Date.now(), exercises: exList };
       state.viewingWorkout = true;
       saveDraft();
@@ -1517,7 +1525,7 @@
     w.exercises.forEach(function (ex, exIdx) {
       var last = findLastInstance(ex.name);
       var hold = isHold(ex.name);
-      var plannedCount = ex.plannedSets || (last ? last.sets.length : (hold ? 1 : 3)) || (hold ? 1 : 3);
+      var plannedCount = ex.plannedSets || defaultPlannedSets(ex, last, hold);
       var firstUndoneIdx = -1;
 
       html += '<div class="ex-card"><div class="ex-name">' + escapeHtml(ex.name) + '</div>';
@@ -1632,7 +1640,9 @@
     view.querySelectorAll("[data-addset]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var exIdx = Number(btn.getAttribute("data-addset"));
-        w.exercises[exIdx].plannedSets = Math.max(w.exercises[exIdx].plannedSets || 3, w.exercises[exIdx].sets.length) + 1;
+        var ex = w.exercises[exIdx];
+        var base = ex.plannedSets || defaultPlannedSets(ex);
+        ex.plannedSets = Math.max(base, ex.sets.length) + 1;
         saveDraft();
         renderWorkoutScreen();
       });
@@ -1652,7 +1662,7 @@
         buzz(18);
         state.flashSet = exIdx + ":" + sIdx;
         // hand focus to the next unfinished set so logging keeps flowing
-        var planned = Math.max(ex.plannedSets || 0, ex.sets.length);
+        var planned = Math.max(ex.plannedSets || defaultPlannedSets(ex), ex.sets.length);
         var nextIdx = -1;
         for (var q = sIdx + 1; q < planned; q++) {
           if (!ex.sets[q] || !ex.sets[q].done) { nextIdx = q; break; }
@@ -1685,7 +1695,7 @@
     var name = state.exSearchQuery.trim();
     if (!name || !state.activeWorkout) return;
     store.addCustomExercise(name, "Other");
-    state.activeWorkout.exercises.push({ name: name, muscle: "Other", sets: [], plannedSets: 3 });
+    state.activeWorkout.exercises.push({ name: name, muscle: "Other", sets: [] });
     state.exSearchQuery = "";
     renderWorkoutScreen();
   }
@@ -1696,7 +1706,7 @@
     wrap.querySelectorAll("[data-pick]").forEach(function (el) {
       el.addEventListener("click", function () {
         var name = el.getAttribute("data-pick");
-        state.activeWorkout.exercises.push({ name: name, muscle: muscleOf(name), sets: [], plannedSets: isHold(name) ? 1 : 3 });
+        state.activeWorkout.exercises.push({ name: name, muscle: muscleOf(name), sets: [] });
         state.exSearchQuery = "";
         saveDraft();
         renderWorkoutScreen();
