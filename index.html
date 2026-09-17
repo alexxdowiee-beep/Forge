@@ -1124,14 +1124,27 @@
     state.lastTab = state.tab;
     var oldBar = document.querySelector(".resume-bar");
     if (oldBar) oldBar.remove();
-    if (state.finishSummary) { renderFinishOverlay(); return; }
-    if (state.activeWorkout && state.viewingWorkout) { renderWorkoutScreen(); return; }
-    stopElapsedTimer();
-    if (state.tab === "home") renderHome();
-    else if (state.tab === "exercises") renderExercisesTab();
-    else if (state.tab === "history") renderHistory();
-    else if (state.tab === "goals") renderGoals();
-    else renderProgress();
+    try {
+      if (state.finishSummary) { renderFinishOverlay(); return; }
+      if (state.activeWorkout && state.viewingWorkout) { renderWorkoutScreen(); return; }
+      stopElapsedTimer();
+      if (state.tab === "home") renderHome();
+      else if (state.tab === "exercises") renderExercisesTab();
+      else if (state.tab === "history") renderHistory();
+      else if (state.tab === "goals") renderGoals();
+      else renderProgress();
+    } catch (err) {
+      // TEMPORARY diagnostic: surface the crash instead of leaving a blank,
+      // unresponsive screen, so we can see exactly what's failing on real data.
+      console.error("Forge render error:", err);
+      view.innerHTML = '<div class="card" style="border-color:var(--danger, #FF5F5F)">' +
+        '<div style="font-weight:700;margin-bottom:8px">Something broke while rendering this screen</div>' +
+        '<div style="font-family:monospace;font-size:12px;white-space:pre-wrap;color:var(--muted)">' +
+        escapeHtml((err && err.message) || String(err)) +
+        (err && err.stack ? '\n\n' + escapeHtml(err.stack) : '') +
+        '</div></div>';
+      return;
+    }
     if (tabChanged) {
       view.classList.remove("screen-in");
       void view.offsetWidth;
