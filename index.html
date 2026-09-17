@@ -1,0 +1,2292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Forge</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="theme-color" content="#0A0A0B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Forge">
+<meta name="application-name" content="Forge">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root, :root[data-theme="dark"] {
+    --bg: #0A0A0B;
+    --surface: #141416;
+    --surface2: #1D1E21;
+    --ink: #F5F5F6;
+    --muted: #8C8D92;
+    --faint: #4E5054;
+    --accent: #FF4A16;
+    --accent-ink: #120B07;
+    --gold: #F0B429;
+    --danger: #E5484D;
+    --border: #26272B;
+    --font-display: 'Anton', 'Arial Narrow', 'Haettenschweiler', sans-serif;
+    --font-body: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+  #app {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    position: relative;
+  }
+  main#view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 18px 96px;
+  }
+  h1, h2, h3 { margin: 0; }
+
+  /* ---------- nav ---------- */
+  /* ---- banner ---- */
+  #topbar {
+    position: sticky; top: 0; z-index: 25;
+    background: var(--bg);
+    padding: 14px 18px 0;
+    border-bottom: 2px solid var(--accent);
+  }
+  .tb-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .tb-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .tb-mark { width: 26px; height: 26px; flex-shrink: 0; }
+  .tb-title.wordmark {
+    font-size: 20px; letter-spacing: 0.22em; text-transform: uppercase;
+    font-weight: 700; padding-left: 1px;
+  }
+  .tb-title {
+    font-family: var(--font-display); font-weight: 600; font-size: 21px;
+    letter-spacing: 0.01em;
+  }
+  .tb-right, #topbar .elapsed {
+    font-size: 12px; color: var(--muted); font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  #topbar .elapsed { font-family: var(--font-display); font-size: 19px; color: var(--ink); }
+  #topbar > .tb-main { padding-bottom: 12px; }
+  #topbar > .momentum { padding-bottom: 11px; }
+  .momentum { margin-top: -4px; }
+  .mo-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .mo-lvl {
+    font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.03em; text-transform: uppercase;
+  }
+  .mo-xp { font-size: 10.5px; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .mo-track { height: 6px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .mo-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.4s ease; }
+  .mo-sub { font-size: 10.5px; color: var(--muted); font-weight: 600; margin-top: 5px; }
+
+  /* ---- goals ---- */
+  .goal-card { cursor: pointer; }
+  .goal-name { font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+  .goal-val { font-size: 16px; }
+  .goal-track { height: 8px; background: var(--surface2); border-radius: 5px; overflow: hidden; margin: 10px 0 7px; }
+  .goal-fill { height: 100%; background: var(--accent); border-radius: 5px; transition: width 0.4s ease; }
+  .goal-sub {
+    font-size: 11.5px; color: var(--muted); font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .goal-add { width: 100%; margin-bottom: 4px; }
+  .xp-note { font-size: 11px; color: var(--faint); text-align: center; margin-top: 12px; }
+  .pick-list { max-height: 230px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin: 12px 0; }
+  .pick-item { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .pick-item:last-child { border-bottom: none; }
+  .wk-label {
+    font-family: var(--font-display); font-size: 13px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+  }
+
+  /* ---- Anton treatment: condensed caps, tight tracking ---- */
+  .stat-num, .elapsed, .hist-kcal .stat-num, .finish-vol, .fstat-num {
+    letter-spacing: 0.005em; line-height: 1.08;
+  }
+  .section-title { letter-spacing: 0.09em; font-size: 12.5px; }
+  .ex-name, .hist-name, .goal-name, .routine-tile .rt-name, .exercise-name {
+    text-transform: uppercase; letter-spacing: 0.035em; line-height: 1.18;
+  }
+  .ex-name { font-size: 16px; }
+  .hist-name { font-size: 16px; }
+  .routine-tile .rt-name { font-size: 14px; }
+  .goal-name { font-size: 14px; }
+  .today-card .routine-name, .finish-card h2, .dialog h3 {
+    text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.15;
+  }
+  .coach-label { letter-spacing: 0.1em; }
+  .mo-lvl { letter-spacing: 0.1em; }
+  .hist-date, .stat-box .stat-num, .prog-sets { letter-spacing: 0.01em; }
+  .big-cta { letter-spacing: 0.09em; text-transform: uppercase; }
+  .tb-title { letter-spacing: 0.06em; text-transform: uppercase; }
+  .muscle-tag-lg { letter-spacing: 0.08em; }
+  h2.section, .section-title { font-weight: 400; }
+
+  /* ---- centred layout pass ---- */
+  .section-title { text-align: center; }
+  .stat-box { text-align: center; }
+  .routine-tile { align-items: center; text-align: center; }
+  .today-card { text-align: center; }
+  .ex-card .ex-name, .ex-card .last-time { text-align: center; }
+  .set-line input { text-align: center; }
+  input[type="number"], .dialog input { text-align: center; }
+
+  /* goal cards: name over value, centred */
+  .goal-card .row-between { flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+  .goal-sub { justify-content: center; gap: 12px; text-align: center; }
+
+  /* home cards */
+  .card.bw-box { justify-content: center; gap: 16px; }
+  .offline-note { text-align: center; }
+  .yt-link { justify-content: center; }
+  .yt-link .yt-go { margin-left: 4px; }
+
+  /* exercise detail heading */
+  .ex-detail-head { text-align: center; }
+  .muscle-tag-lg { text-align: center; }
+  .coach-label { text-align: center; }
+
+  /* ---- motion + touch feedback ---- */
+  @keyframes screenIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .screen-in { animation: screenIn 0.16s ease-out; }
+  @keyframes tickFlash {
+    0%   { background: rgba(255,74,22,0.30); }
+    100% { background: transparent; }
+  }
+  .set-line.flash { animation: tickFlash 0.55s ease-out; border-radius: 8px; }
+  .check-btn { transition: transform 0.08s ease, background 0.12s ease; }
+  .check-btn:active { transform: scale(0.88); }
+  .routine-tile, .card, .big-cta, .secondary { transition: transform 0.1s ease; }
+  .big-cta:active, .secondary:active { transform: scale(0.98); }
+  .tab { transition: color 0.14s ease; }
+
+  /* ---- weight stepper ---- */
+  .wt-cell { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .wt-cell input { flex: 1; min-width: 0; padding-left: 2px; padding-right: 2px; }
+  .step {
+    width: 26px; height: 34px; flex-shrink: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 8px;
+    font-size: 15px; font-weight: 700; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.08s ease;
+  }
+  .step:active { transform: scale(0.9); background: var(--accent); color: var(--accent-ink); }
+  .step:disabled { opacity: 0.3; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .screen-in, .set-line.flash { animation: none; }
+  }
+
+  .tabbar {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 20;
+  }
+  .tab {
+    flex: 1; padding: 12px 0 10px;
+    background: none; border: none;
+    color: var(--faint);
+    font-family: var(--font-body);
+    font-weight: 700; font-size: 10px;
+    letter-spacing: 0.01em;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .tab .ic { font-size: 18px; }
+  .tab.active { color: var(--accent); }
+
+  /* ---------- generic ---------- */
+  .stat-num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .row-between { display: flex; justify-content: space-between; align-items: center; }
+  .muted { color: var(--muted); }
+  .pill {
+    display: inline-block;
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px;
+    letter-spacing: 0.02em;
+  }
+  button { font-family: var(--font-body); cursor: pointer; }
+  button.big-cta {
+    background: var(--accent); color: var(--accent-ink);
+    border: none; width: 100%;
+    font-family: var(--font-display); font-weight: 700; font-size: 17px;
+    padding: 17px; border-radius: 14px;
+    letter-spacing: 0.01em;
+  }
+  button.big-cta:active { transform: scale(0.98); }
+  button.secondary {
+    background: var(--surface2); color: var(--ink);
+    border: 1px solid var(--border);
+    font-weight: 600; font-size: 13px;
+    padding: 10px 14px; border-radius: 10px;
+  }
+  button.ghost { background: none; border: none; color: var(--muted); font-size: 13px; font-weight: 600; padding: 4px; }
+  button.ghost.danger { color: var(--danger); }
+  input[type="text"], input[type="number"], select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    width: 100%;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .empty-state { padding: 46px 10px; text-align: center; color: var(--muted); }
+  .empty-state p { margin: 6px 0 20px; font-size: 14px; line-height: 1.5; }
+  .section-title {
+    font-family: var(--font-display); font-weight: 600; font-size: 13px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--muted); margin: 22px 0 10px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ---------- home ---------- */
+  .home-header { margin-bottom: 18px; }
+  .home-header .greet { font-family: var(--font-display); font-size: 24px; font-weight: 600; }
+  .home-header .date { color: var(--muted); font-size: 13px; }
+  .routine-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .routine-tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 13px; padding: 12px 13px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    text-align: left; color: var(--ink);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .routine-tile .rt-name {
+    font-family: var(--font-display); font-weight: 600; font-size: 15px;
+  }
+  .routine-tile .rt-sub { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .routine-tile.active {
+    background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+  }
+  .routine-tile.active .rt-sub { color: var(--accent-ink); opacity: 0.75; }
+  .routine-tile:active { transform: scale(0.98); }
+  .today-card .routine-name { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 2px; }
+  .today-card .ex-preview { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .stat-box .stat-num { font-size: 26px; display: block; }
+  .stat-box .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .bw-box { display: flex; justify-content: space-between; align-items: center; }
+  .bw-box .stat-num { font-size: 26px; }
+  .week-spark { display: flex; align-items: flex-end; gap: 4px; height: 40px; margin-top: 10px; }
+  .week-spark .bar { flex: 1; background: var(--surface2); border-radius: 3px; position: relative; }
+  .week-spark .bar.filled { background: var(--accent); }
+  .week-spark .lbl { font-size: 9px; color: var(--faint); text-align: center; margin-top: 3px; }
+
+  /* ---------- workout screen ---------- */
+  .workout-topbar {
+    position: sticky; top: 0; background: var(--bg);
+    padding: 4px 0 12px; display: flex; justify-content: space-between; align-items: center;
+    z-index: 5;
+  }
+  .elapsed { font-family: var(--font-display); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rest-banner {
+    background: var(--accent); color: var(--accent-ink);
+    border-radius: 10px; padding: 9px 13px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 8px 0 2px;
+  }
+  .rest-banner .rt { font-family: var(--font-display); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rest-banner button { background: rgba(0,0,0,0.15); border: none; color: var(--accent-ink); font-weight: 700; font-size: 12px; padding: 7px 12px; border-radius: 8px; }
+
+  .ex-card { margin-bottom: 16px; }
+  .ex-card .ex-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+  .ex-card .last-time { font-size: 12px; color: var(--muted); margin: 2px 0 12px; }
+  .set-line {
+    display: grid;
+    grid-template-columns: 16px 1.45fr 1fr 38px;
+    align-items: center; gap: 8px;
+    padding: 6px 0;
+  }
+  .set-line.hold { grid-template-columns: 16px 1fr 38px; }
+  .set-line .sidx { color: var(--faint); font-size: 12px; font-weight: 700; }
+  .set-line.done { opacity: 0.55; }
+  .set-line.active .sidx { color: var(--accent); }
+  .check-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--surface2);
+    color: var(--muted); font-size: 16px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .check-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .add-set-link { font-size: 12px; color: var(--accent); background: none; border: none; font-weight: 700; padding: 6px 0; }
+  .ex-remove { text-align: right; margin-top: 2px; }
+
+  .add-ex-box { margin-top: 6px; }
+  .search-results { max-height: 220px; overflow-y: auto; margin-top: 8px; border: 1px solid var(--border); border-radius: 10px; }
+  .search-item { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+  .search-item:last-child { border-bottom: none; }
+  .search-item .m { font-size: 11px; color: var(--muted); }
+
+  .finish-bar { display: flex; gap: 10px; margin-top: 20px; }
+  .finish-bar button.big-cta { flex: 2; }
+  .finish-bar button.secondary { flex: 1; }
+
+  /* ---------- finish overlay ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(6,7,8,0.9);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50; padding: 20px;
+  }
+  .finish-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 30px 24px; width: 100%; max-width: 360px;
+    text-align: center;
+  }
+  .finish-card .fire { font-size: 34px; margin-bottom: 4px; }
+  .finish-card h2 { font-family: var(--font-display); font-size: 22px; margin-bottom: 20px; }
+  .finish-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .finish-grid .fstat-num { font-size: 22px; }
+  .finish-grid .fstat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .finish-vol { font-size: 30px; margin-bottom: 4px; }
+  .finish-vol-lbl { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .pr-line { color: var(--gold); font-weight: 700; font-size: 14px; margin-bottom: 18px; }
+
+  /* ---------- exercises tab ---------- */
+  .ex-list-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 13px 0; border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .ex-list-item .en { font-weight: 600; font-size: 15px; }
+  .ex-detail-back { color: var(--muted); font-size: 13px; font-weight: 700; margin-bottom: 14px; background: none; border: none; }
+  .prev-perf-row {
+    display: flex; justify-content: space-between; border-top: 1px solid var(--border);
+    padding: 10px 0; font-size: 13px; font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- history ---------- */
+  .hist-item { border-bottom: 1px solid var(--border); padding: 14px 0; }
+  .hist-head { display: flex; justify-content: space-between; align-items: flex-start; cursor: pointer; gap: 12px; }
+  .hist-main { flex: 1; min-width: 0; }
+  .hist-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .hist-name { font-family: var(--font-display); font-weight: 600; font-size: 17px; }
+  .hist-when { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .hist-tags { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 5px; }
+  .hist-tags .tag {
+    background: var(--surface2); color: var(--muted);
+    font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+  }
+  .hist-sets { font-size: 11px; color: var(--faint); font-weight: 600; }
+  .hist-top {
+    font-size: 12.5px; color: var(--ink); margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .hist-kcal { text-align: right; flex-shrink: 0; }
+  .hist-kcal .stat-num { font-size: 20px; display: block; line-height: 1.1; }
+  .hist-kcal .kcal-u { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .hist-kcal .kcal-na { font-size: 20px; color: var(--faint); }
+  .hist-foot {
+    display: flex; flex-wrap: wrap; gap: 4px 14px;
+    font-size: 11.5px; color: var(--muted);
+    border-top: 1px dotted var(--border); padding-top: 8px; margin-top: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .finish-kcal { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .finish-kcal span { font-size: 11px; color: var(--faint); }
+
+  .hist-detail { display: none; margin-top: 10px; }
+  .hist-detail.open { display: block; }
+  .hist-ex { padding: 7px 0; border-top: 1px dotted var(--border); font-size: 13px; }
+  .hist-ex b { font-weight: 600; }
+  .hist-ex .s { color: var(--muted); }
+
+  /* ---------- progress ---------- */
+  .pr-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .pr-row .pw { font-family: var(--font-display); font-weight: 700; }
+  .muscle-bar-row { margin-bottom: 10px; }
+  .muscle-bar-row .mlabel { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+  .muscle-bar-track { background: var(--surface2); border-radius: 6px; height: 8px; overflow: hidden; }
+  .muscle-bar-fill { background: var(--accent); height: 100%; border-radius: 6px; }
+
+  .coach-block { padding-bottom: 14px; }
+  .coach-block:last-child { padding-bottom: 0; }
+  .coach-block p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+  .coach-label {
+    font-family: var(--font-display); font-size: 12px; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 5px;
+  }
+  .coach-block.warn { border-top: 1px solid var(--border); padding-top: 14px; }
+  .coach-block.warn .coach-label { color: var(--gold); }
+  .muscle-tag-lg {
+    font-family: var(--font-display); font-size: 13px; font-weight: 600;
+    color: var(--accent); text-transform: uppercase; letter-spacing: 0.03em;
+    margin-bottom: 14px;
+  }
+  .kf-hold {
+    text-align: center; font-family: var(--font-display);
+    font-size: 13px; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+  }
+  .yt-link {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 13px 15px;
+    color: var(--ink); text-decoration: none;
+    font-size: 14px; font-weight: 600; margin-bottom: 4px;
+  }
+  .yt-link .yt-ic {
+    width: 26px; height: 26px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #E0342B; color: #fff; border-radius: 6px; font-size: 11px;
+  }
+  .yt-link .yt-go { margin-left: auto; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) {
+    .pulsing { animation: none; }
+  }
+
+  .dialog-overlay {
+    position: fixed; inset: 0;
+    background: rgba(6,7,8,0.82);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 60; padding: 22px;
+  }
+  .dialog {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 22px 20px;
+    width: 100%; max-width: 330px;
+  }
+  .dialog h3 { font-family: var(--font-display); font-size: 19px; font-weight: 600; margin-bottom: 6px; }
+  .dialog p { margin: 0 0 16px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .dialog input { margin: 12px 0 16px; font-size: 20px; font-family: var(--font-display); }
+  .dialog-actions { display: flex; gap: 10px; }
+  .dialog-actions button { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; }
+  .dialog-danger { background: var(--danger); color: #fff; border: none; }
+  .dialog-ok { background: var(--accent); color: var(--accent-ink); border: none; }
+
+  .resume-bar {
+    position: fixed;
+    bottom: 58px; left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 28px); max-width: 452px;
+    background: var(--accent); color: var(--accent-ink);
+    border: none; border-radius: 12px;
+    padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-body); font-weight: 700; font-size: 13px;
+    z-index: 19;
+  }
+  .resume-bar .resume-cta { font-family: var(--font-display); font-size: 14px; }
+
+  .offline-note {
+    font-size: 12px; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 9px 12px; margin-bottom: 14px;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+  .pulsing { animation: pulse 1.4s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar"></header>
+  <main id="view"></main>
+  <nav class="tabbar">
+    <button class="tab active" data-tab="home"><span class="ic">&#8962;</span>Home</button>
+    <button class="tab" data-tab="exercises"><span class="ic">&#9998;</span>Exercises</button>
+    <button class="tab" data-tab="history"><span class="ic">&#8801;</span>History</button>
+    <button class="tab" data-tab="progress"><span class="ic">&#9650;</span>Progress</button>
+    <button class="tab" data-tab="goals"><span class="ic">&#9678;</span>Goals</button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============ exercise library ============ */
+  var EXERCISES = [
+    { name: "Bench Press", muscle: "Chest",
+      setup: "Lie back with your eyes directly under the bar. Pull your shoulder blades together and down into the bench like you're pinching a pencil between them, and keep them there the whole set. Feet flat, planted wide, slight arch in the lower back.",
+      execute: "Unrack, take a breath and hold it. Lower the bar under control to the bottom of your chest, elbows tucked to roughly 45 degrees from your torso. Touch, don't bounce, then drive the bar back up and slightly toward your face. Breathe out at the top.",
+      mistake: "Flaring the elbows straight out to the sides. It puts the shoulder joint in a rotten position and it's the number one reason blokes end up with shoulder pain from benching. Tuck those elbows in." },
+
+    { name: "Incline Bench Press", muscle: "Chest",
+      setup: "Bench at 30 degrees. Not 45, not 60. Any steeper and you're just doing a bad shoulder press. Same setup as flat bench: shoulder blades pinned back and down, feet planted.",
+      execute: "Lower the bar to the top of your chest, just below the collarbone. Control it down, pause briefly, press back up. Keep the elbows tucked in the same as flat bench.",
+      mistake: "Setting the bench too steep and wondering why your front delts are screaming and your upper chest isn't growing. Drop the angle down." },
+
+    { name: "Dumbbell Press", muscle: "Chest",
+      setup: "Sit on the bench with the dumbbells on your thighs, then kick them up one at a time as you lie back. Shoulder blades retracted, feet planted.",
+      execute: "Start with the dumbbells just outside your chest. Press up and slightly inward until they nearly touch at the top. Lower slowly until you feel a good stretch across the chest, then drive back up.",
+      mistake: "Letting the elbows drop to 90 degrees straight out from the shoulders. Keep them at about 45 degrees. Also, don't clang the dumbbells together at the top, that just kills the tension you worked for." },
+
+    { name: "Push Ups", muscle: "Chest",
+      setup: "Hands slightly wider than shoulder-width, directly under your chest. Squeeze your glutes and brace your abs so your body is one straight plank from head to heels.",
+      execute: "Lower yourself until your chest is an inch off the floor, elbows tucked back at 45 degrees. Push the floor away hard and lock out at the top. Keep that straight line the entire time.",
+      mistake: "Sagging hips. If your lower back is drooping toward the floor you've stopped bracing. Squeeze your glutes like you're holding a coin between them and the problem sorts itself out." },
+
+    { name: "Chest Fly", muscle: "Chest",
+      setup: "Lie flat, dumbbells pressed above your chest with palms facing each other. Put a soft bend in your elbows and lock that angle in. Leave your ego at the rack, this is a stretch movement, not a max lift.",
+      execute: "Open your arms out wide in a big arc until you feel a deep stretch across the chest. Then squeeze your chest to bring them back together like you're hugging a barrel.",
+      mistake: "Bending the elbows more at the bottom to handle heavier weight. That turns it into a sloppy press and you lose the entire point of the exercise. Lock the elbow angle and go lighter." },
+
+    { name: "Deadlift", muscle: "Back",
+      setup: "Bar over the middle of your foot, about an inch from your shins. Hinge down and grip just outside your legs. Chest up, lats engaged like you're squeezing oranges in your armpits, flat back, hips higher than your knees.",
+      execute: "Take a big breath, brace your core hard. Push the floor away with your legs, keeping the bar dragging up your shins. Once it passes the knees, drive your hips through and stand tall. Lower it under control the same path.",
+      mistake: "Rounding the lower back to start the pull. This is the one that hurts people. If you can't keep a flat back from the floor, lift from blocks or go lighter until you can. No exceptions on this one." },
+
+    { name: "Pull Ups", muscle: "Back",
+      setup: "Grip slightly wider than shoulder-width, palms facing away. Start from a full dead hang with your shoulders pulled down away from your ears before you move.",
+      execute: "Think about pulling your elbows down toward your hip pockets rather than pulling yourself up. Chin clears the bar, chest toward the bar. Lower yourself all the way down under control, take about two seconds on the way down.",
+      mistake: "Kipping and swinging to grind out extra reps. Five strict pull ups beat fifteen swinging ones every time. If you can't do strict reps yet, use a band or do slow negatives." },
+
+    { name: "Barbell Row", muscle: "Back",
+      setup: "Hinge at the hips until your torso is around 45 degrees or lower, knees soft, flat back. Grip just outside shoulder-width, bar hanging at arm's length.",
+      execute: "Pull the bar into your lower ribs or upper stomach, driving your elbows back and squeezing the shoulder blades together at the top. Lower under control to a full stretch.",
+      mistake: "Standing up more and more as the set goes on until you're basically doing shrugs. Pick a torso angle and hold it. If you can't, the weight's too heavy." },
+
+    { name: "Lat Pulldown", muscle: "Back",
+      setup: "Set the thigh pad snug so you're not lifting off the seat. Grip a bit wider than shoulder-width. Sit tall with a slight backward lean, chest proud.",
+      execute: "Pull the bar down to your upper chest, leading with your elbows and driving them down and back. Squeeze the lats hard at the bottom, then control the bar all the way back up to a full stretch.",
+      mistake: "Heaving backward with your whole torso and letting the arms do the work. Keep the lean fixed at about 15 degrees and think elbows, not hands." },
+
+    { name: "Seated Row", muscle: "Back",
+      setup: "Feet planted on the platform, knees slightly bent, chest up, sitting tall. Grab the handle and set your shoulders back before the first rep.",
+      execute: "Pull the handle to your stomach, elbows driving straight back close to your body. Squeeze the shoulder blades together and hold for a beat. Let the weight pull your arms forward to a full stretch without your back rounding.",
+      mistake: "Rocking backward and forward to get extra range. Your torso should stay pretty much still. Let your back muscles do the work, not your hips." },
+
+    { name: "Squat", muscle: "Legs",
+      setup: "Bar on your upper traps, not your neck. Feet shoulder-width or slightly wider, toes turned out around 15 to 30 degrees. Squeeze the bar hard, chest up, big breath in and brace your core like someone's about to punch you.",
+      execute: "Break at the hips and knees at the same time. Sit down and back, knees tracking out over your toes. Go until your hip crease is below the top of your knee if your mobility allows. Drive up through the middle of your foot, hips and chest rising together.",
+      mistake: "Knees caving inward on the way up. That's usually weak glutes or too much weight. Cue yourself to spread the floor apart with your feet, and drop the load until the knees track properly." },
+
+    { name: "Leg Press", muscle: "Legs",
+      setup: "Feet shoulder-width on the platform, roughly in the middle. Back and hips flat against the pad, no gap in your lower back.",
+      execute: "Lower the platform until your knees reach about 90 degrees, or as deep as you can go without your lower back rounding off the pad. Press back up through your heels and midfoot without locking the knees out hard.",
+      mistake: "Going so deep your hips curl up off the seat and your lower back rounds. That's a recipe for a back injury on a machine that's meant to be the safe option. Stop where your back stays flat." },
+
+    { name: "Lunges", muscle: "Legs",
+      setup: "Stand tall, core braced, weights at your sides or bar on your back. Look straight ahead, not down.",
+      execute: "Step forward into a comfortable stride. Drop your back knee toward the floor until it's an inch away. Front shin stays roughly vertical, front knee over the ankle. Push back up through the front heel.",
+      mistake: "Taking too short a step and letting the front knee shoot way over the toes, or leaning the torso forward. Take a longer stride and keep your chest up and proud." },
+
+    { name: "Leg Extension", muscle: "Legs",
+      setup: "Adjust the seat so the pivot point of the machine lines up with your knee joint. Pad sits on your shins just above the ankles, not on your feet. Hold the handles.",
+      execute: "Extend your legs until they're straight, squeeze the quads hard at the top for a full second. Then lower slowly, take about three seconds on the way down.",
+      mistake: "Slamming the stack and using momentum to fling the weight up. This is an isolation exercise, the whole value is in the squeeze and the slow negative. Go light and make it burn." },
+
+    { name: "Leg Curl", muscle: "Legs",
+      setup: "Pad sits just above your heels on the Achilles. Line the machine's pivot up with your knee joint. Hips pressed firmly into the pad.",
+      execute: "Curl your heels toward your backside, squeeze the hamstrings hard at the peak. Control the weight all the way back to a full stretch.",
+      mistake: "Hips lifting off the pad to help drag the weight up. Keep them pinned down. If they're popping up, the weight's too heavy." },
+
+    { name: "Calf Raise", muscle: "Legs",
+      setup: "Balls of your feet on the edge of a step or platform, heels hanging free. Stand tall, legs straight for the gastrocnemius.",
+      execute: "Drop your heels down for a full deep stretch, hold that stretch for a second. Then push all the way up onto your toes and pause and squeeze at the top for a second. Slow and deliberate.",
+      mistake: "Fast, bouncy half reps. Calves are stubborn and they only respond to full range and a proper pause at both ends. Slow it right down." },
+
+    { name: "Overhead Press", muscle: "Shoulders",
+      setup: "Bar resting on your front delts, grip just outside shoulder-width, elbows slightly in front of the bar. Feet hip-width, glutes and core squeezed tight.",
+      execute: "Big breath, brace. Press the bar straight up, tilting your head back slightly to let it pass your face, then push your head through so the bar finishes directly over the middle of your feet. Lock out overhead, then lower under control.",
+      mistake: "Arching the lower back into a big banana shape to press the weight. That's your core giving out, not your shoulders getting stronger. Squeeze your glutes hard and if you still arch, drop the weight." },
+
+    { name: "Lateral Raise", muscle: "Shoulders",
+      setup: "Dumbbells at your sides, slight bend in the elbows, torso upright with a tiny forward lean. Go lighter than your ego wants, this one's all about form.",
+      execute: "Raise the dumbbells out to the sides until your arms are level with your shoulders. Lead with your elbows, as if you're pouring out a jug of water. Pause at the top, then lower slowly.",
+      mistake: "Swinging the torso and using momentum to throw the weights up. If you're heaving, you're training your traps and your lower back, not your side delts. Halve the weight and do it properly." },
+
+    { name: "Front Raise", muscle: "Shoulders",
+      setup: "Dumbbells in front of your thighs, palms facing your legs, slight bend in the elbows. Stand tall, brace your core.",
+      execute: "Raise the weights straight out in front of you to about eye level. Pause briefly, then lower under control back to the start.",
+      mistake: "Rocking the hips and using body English to launch the weight. Keep everything below your shoulders completely still. If the rest of you is moving, go lighter." },
+
+    { name: "Rear Delt Fly", muscle: "Shoulders",
+      setup: "Hinge forward at the hips until your torso is nearly parallel to the floor, flat back, light dumbbells hanging beneath you. Soft bend in the elbows, locked in place.",
+      execute: "Raise your arms out to the sides in a wide arc, squeezing your shoulder blades together at the top. Think about pulling your arms apart rather than lifting the weight up.",
+      mistake: "Bending the elbows more and turning it into a wide row. Rear delts are small, so they need small weights and clean form. Keep that elbow angle fixed." },
+
+    { name: "Arnold Press", muscle: "Shoulders",
+      setup: "Seated with back support, dumbbells in front of your chest at around chin height, palms facing you, elbows tucked in.",
+      execute: "As you press up, rotate your palms outward so they're facing forward at the top. Lock out overhead, then reverse the rotation smoothly on the way down.",
+      mistake: "Rushing through the rotation. The twist is the whole point of the exercise, it's what hits the front and side delts through a bigger range. Slow it down and control it." },
+
+    { name: "Bicep Curl", muscle: "Arms",
+      setup: "Stand tall, feet hip-width, dumbbells or bar at arm's length, palms facing forward. Elbows pinned tight to your ribs.",
+      execute: "Curl the weight up by bending at the elbow only, squeeze the biceps hard at the top. Lower slowly with control, taking about two to three seconds, and get a full stretch at the bottom.",
+      mistake: "Swinging the torso back to heave the weight up. If you're leaning back, you're doing a bad row. Keep the elbows glued to your sides and drop the weight until they stay there." },
+
+    { name: "Hammer Curl", muscle: "Arms",
+      setup: "Dumbbells at your sides with a neutral grip, palms facing each other like you're holding two hammers. Elbows tight to your body.",
+      execute: "Curl straight up keeping that neutral grip the whole way, squeeze at the top, lower under control to a full stretch.",
+      mistake: "Letting the elbows drift forward as you curl, which lets the front delts take over. Keep them locked back at your sides through the entire rep." },
+
+    { name: "Tricep Pushdown", muscle: "Arms",
+      setup: "Face the cable, bar or rope at chest height. Grip it, tuck your elbows firmly at your sides. Slight forward lean, core braced, feet staggered if it helps you stay steady.",
+      execute: "Push the bar down until your arms are fully straight, squeeze the triceps hard at the bottom. Let the bar come back up only until your forearms are parallel with the floor, then go again.",
+      mistake: "Leaning your whole body weight onto the bar and turning it into a standing dip. Stand more upright and let the triceps do the work on their own." },
+
+    { name: "Skull Crusher", muscle: "Arms",
+      setup: "Lie on a flat bench, EZ bar or dumbbells pressed above your chest. Bring the arms back slightly so they're angled toward your head, which keeps tension on the triceps at the top.",
+      execute: "Bend only at the elbow, lowering the bar toward your forehead or just behind your head. Keep your upper arms still. Extend back up, squeezing the triceps.",
+      mistake: "Elbows flaring outward as you lower the weight. Keep them pointed up and in, roughly shoulder-width. Also, control it, the name of this exercise is a warning." },
+
+    { name: "Dips", muscle: "Arms",
+      setup: "Grip the bars, arms locked out, shoulders pushed down away from your ears. Stay upright for triceps, lean forward slightly for more chest.",
+      execute: "Lower yourself until your upper arms are roughly parallel to the floor, elbows tracking back rather than flaring wide. Push back up and lock out at the top.",
+      mistake: "Dropping too deep and letting the shoulders roll forward at the bottom. Parallel is deep enough for most people. If your shoulders feel pinched, cut the depth." },
+
+    { name: "Plank", muscle: "Core", hold: 45,
+      setup: "Forearms on the floor, elbows directly under your shoulders, feet hip-width. Body in one straight line from head to heels.",
+      execute: "Squeeze your glutes, pull your ribs down toward your hips, and brace your abs like you're about to take a punch. Breathe normally. Hold for quality time, not record time. Thirty seconds of a hard brace beats two minutes of sagging.",
+      mistake: "Hips piking up in the air or sagging toward the floor. Both mean you've stopped bracing. If your form breaks, stop the set, rest, and do another good one." },
+
+    { name: "Crunches", muscle: "Core",
+      setup: "Lie on your back, knees bent, feet flat. Hands lightly behind your head or crossed on your chest. Don't lace your fingers behind your neck.",
+      execute: "Curl your ribs down toward your hips, lifting your shoulder blades just off the floor. Squeeze the abs hard at the top, then lower slowly. It's a short movement, not a full sit up.",
+      mistake: "Yanking on your head and neck with your hands. Your fingers should be barely touching. If your neck is sore afterward, that's the problem." },
+
+    { name: "Hanging Leg Raise", muscle: "Core",
+      setup: "Hang from a bar, shoulders pulled down and active, body still. Get rid of any swing before you start.",
+      execute: "Curl your pelvis up toward your ribcage as you raise your legs. That posterior tilt is what actually works the abs. Raise until your thighs are at least parallel, then lower slowly under full control.",
+      mistake: "Swinging like a pendulum and just lifting the legs with the hip flexors. If you're not curling the pelvis, the abs are barely involved. Start with bent knees until you can control it." },
+
+    { name: "Russian Twist", muscle: "Core",
+      setup: "Sit on the floor, knees bent, heels down or lifted for more difficulty. Lean back to about 45 degrees so you feel the abs switch on. Hold a weight at your chest.",
+      execute: "Rotate your whole torso from side to side, turning your shoulders and ribcage, not just your arms. Tap the weight beside your hip each side. Controlled tempo.",
+      mistake: "Waving the weight side to side while the torso stays still. Zero rotation means zero benefit. Slow down and actually turn through your midsection." },
+
+    { name: "Ab Wheel", muscle: "Core",
+      setup: "Kneel down with the wheel under your shoulders. Brace hard and tuck your pelvis under before you move. Knees on a pad, your kneecaps will thank you.",
+      execute: "Roll forward slowly, only as far as you can go while keeping a flat back and a braced core. Pause, then pull yourself back using your abs, not your hips.",
+      mistake: "Rolling out too far too soon and letting the lower back sag into an arch. That's how people hurt themselves on this one. Shorten the range until you can own it." },
+
+    { name: "Running", muscle: "Cardio", hold: 30, unit: "min",
+      setup: "Stand tall, shoulders relaxed and down, arms bent at about 90 degrees. Look ahead, not at your feet.",
+      execute: "Land midfoot underneath your body, not out in front. Aim for a quick cadence, shorter faster steps rather than long reaching ones. Drive the elbows back, let the arms swing forward naturally. Breathe in a steady rhythm.",
+      mistake: "Overstriding, meaning reaching your foot way out in front and landing heel first. It acts like a brake on every step and sends the impact straight into your knees. Shorten your stride and pick up your cadence." },
+
+    { name: "Cycling", muscle: "Cardio", hold: 30, unit: "min",
+      setup: "Set the saddle height so there's a slight bend in your knee, around 25 to 30 degrees, at the bottom of the pedal stroke. Ball of the foot over the pedal spindle.",
+      execute: "Aim for a smooth cadence around 80 to 90 revolutions per minute rather than grinding a huge gear. Push over the top of the stroke and pull through the bottom. Keep the upper body relaxed.",
+      mistake: "Saddle set too low, which is the most common setup error and hammers the front of your knees. If your knees ache after riding, raise the seat before you change anything else." },
+
+    { name: "Rowing", muscle: "Cardio", hold: 20, unit: "min",
+      setup: "Feet strapped in, shins vertical at the catch, shoulders in front of the hips, arms straight, core braced.",
+      execute: "Legs, then body, then arms. Drive hard with the legs first, then swing the torso back, then finish by pulling the handle to your lower ribs. Reverse it exactly on the recovery: arms, body, legs.",
+      mistake: "Pulling with the arms before the legs have finished driving. You'll burn out your arms and get almost nothing from the row. Legs first, every single stroke." },
+
+    { name: "Jump Rope", muscle: "Cardio", hold: 10, unit: "min",
+      setup: "Rope handles at hip height when you stand on the middle of the rope. Elbows tucked close to your ribs, hands out to the sides at about hip level.",
+      execute: "Turn the rope with your wrists, not your whole arms. Small jumps, just an inch or two off the floor, landing softly on the balls of your feet with soft knees.",
+      mistake: "Jumping way too high and swinging from the shoulders. You'll be gassed in ninety seconds. Tiny hops, quiet feet, wrists doing the work." },
+
+    { name: "Stair Climber", muscle: "Cardio", hold: 20, unit: "min",
+      setup: "Stand tall on the machine, shoulders back, core engaged. Hands resting lightly on the rails for balance only.",
+      execute: "Take full steps, planting your whole foot on each step rather than just the toes. Drive through the heel and squeeze the glute at the top of each step. Keep an upright posture throughout.",
+      mistake: "Hanging off the handrails and leaning your body weight into them. It cuts the actual work dramatically. If you need to lean to keep up, slow the machine down." }
+  ];
+
+  // Mobility work. hold = default seconds per set. phase: "warmup" (dynamic) or "cooldown" (static).
+  var MOBILITY = [
+    { name: "Leg Swings", muscle: "Mobility", target: "Legs", phase: "warmup", hold: 30,
+      setup: "Stand side-on to a rack or wall, hand on it for balance. Stand tall, brace your core lightly.",
+      execute: "Swing one leg forward and back in a controlled arc, gradually going higher as it loosens up. Do 30 seconds a leg, then swing side to side across your body for the hips.",
+      mistake: "Swinging wildly and arching the lower back to get more height. Let the range build over the set, don't force it on rep one." },
+
+    { name: "Arm Circles", muscle: "Mobility", target: "Shoulders", phase: "warmup", hold: 30,
+      setup: "Stand tall, arms out to the sides at shoulder height, shoulders relaxed away from your ears.",
+      execute: "Make small circles forward, gradually building to big full circles. Halfway through, reverse direction. Keep it smooth and controlled.",
+      mistake: "Shrugging your shoulders up toward your ears as you circle. Keep them pressed down and let the movement come from the shoulder joint." },
+
+    { name: "World's Greatest Stretch", muscle: "Mobility", target: "Legs", phase: "warmup", hold: 40,
+      setup: "Start in a push up position. Step your right foot up to the outside of your right hand into a deep lunge.",
+      execute: "Drop your right elbow toward the floor inside your foot, hold a beat, then rotate your right arm up toward the ceiling and follow it with your eyes. Return, swap sides. It hits hips, hamstrings and thoracic spine in one go, which is exactly why it earned the name.",
+      mistake: "Rushing it. Take two or three seconds in each position. Also keep the back leg straight and strong rather than letting the knee collapse to the floor." },
+
+    { name: "Cat-Cow", muscle: "Mobility", target: "Core", phase: "warmup", hold: 30,
+      setup: "On hands and knees, hands under shoulders, knees under hips, spine in neutral.",
+      execute: "Breathe out and round your back up toward the ceiling, tucking your chin and pelvis. Breathe in and reverse it, dropping the belly and lifting the chest and tailbone. Move slowly with your breathing.",
+      mistake: "Powering through fast reps. This is about segmental spinal movement, so slow it right down and try to move one vertebra at a time." },
+
+    { name: "Band Pull-Apart", muscle: "Mobility", target: "Back", phase: "warmup", hold: 30,
+      setup: "Hold a light resistance band at shoulder height, arms straight out in front, hands about shoulder-width apart.",
+      execute: "Pull the band apart by driving your hands out to the sides, squeezing your shoulder blades together. Control it back in. Brilliant for waking up the upper back before any pressing.",
+      mistake: "Using a band that's far too heavy and bending the elbows to cheat. Keep the arms straight and go light, this is a warm up, not a back workout." },
+
+    { name: "Bodyweight Squat to Stand", muscle: "Mobility", target: "Legs", phase: "warmup", hold: 40,
+      setup: "Stand with feet shoulder-width, bend over and grab your toes with both hands, keeping your grip the whole way.",
+      execute: "Holding your toes, drop your hips down into the bottom of a deep squat and lift your chest up tall. Hold for a second, then straighten your legs back up while keeping hold of the toes. Perfect prep before squats.",
+      mistake: "Letting go of your toes or rounding your back at the bottom. If you can't reach, hold your shins instead, it still works." },
+
+    { name: "Hip Circles", muscle: "Mobility", target: "Legs", phase: "warmup", hold: 30,
+      setup: "Stand on one leg with support, or on hands and knees for more control. Brace your core.",
+      execute: "Lift one knee to hip height and draw big slow circles with it, opening the hip out and then back around. Go both directions, then swap legs.",
+      mistake: "Twisting the whole torso to make the circle bigger. Keep the pelvis still and let the movement happen at the hip joint itself." },
+
+    { name: "Doorway Chest Stretch", muscle: "Mobility", target: "Chest", phase: "cooldown", hold: 40,
+      setup: "Stand in a doorway or at a rack upright. Place your forearm flat against the frame, elbow bent at 90 degrees and level with your shoulder.",
+      execute: "Step gently forward with the same-side foot and rotate your chest away until you feel a firm stretch across the front of the chest. Breathe slowly and hold. Repeat with your elbow higher and lower to hit different fibres.",
+      mistake: "Cranking into it hard and fast. Stretch to a strong sensation, not pain, and let the tissue give over 30 to 40 seconds rather than forcing it." },
+
+    { name: "Lat Hang Stretch", muscle: "Mobility", target: "Back", phase: "cooldown", hold: 40,
+      setup: "Grab a pull up bar with both hands, feet on the floor or fully hanging if your grip and shoulders allow.",
+      execute: "Let your body hang and relax, allowing the shoulders to rise up toward your ears. Breathe out and let the lats lengthen. Shift your weight slightly side to side to find the tight spots.",
+      mistake: "Holding tension in the shoulders the whole time. The point is to relax and let gravity do the work. If your grip gives out first, keep your feet on the ground and take some weight off." },
+
+    { name: "Quad Stretch", muscle: "Mobility", target: "Legs", phase: "cooldown", hold: 40,
+      setup: "Stand on one leg, hand on a wall for balance. Grab the ankle of the other leg and pull the heel toward your backside.",
+      execute: "Tuck your pelvis under and squeeze the glute of the stretching leg, that's what actually takes the slack out of the hip flexor. Keep the knees together. Hold and breathe.",
+      mistake: "Letting the lower back arch and the knee drift out to the side. Tuck the pelvis first, and you'll feel the stretch shoot up dramatically without pulling any harder." },
+
+    { name: "Seated Hamstring Stretch", muscle: "Mobility", target: "Legs", phase: "cooldown", hold: 40,
+      setup: "Sit on the floor with one leg straight out, the other bent with the sole against your inner thigh. Sit up tall on your sit bones.",
+      execute: "Hinge forward from the hips, reaching your chest toward your knee rather than your head toward your shin. Keep a long flat back. Hold, breathe, and ease slightly deeper on each exhale.",
+      mistake: "Rounding the spine and reaching with your head to grab your toes. That stretches your lower back, not your hamstrings. Chest to knee, flat back." },
+
+    { name: "Pigeon Stretch", muscle: "Mobility", target: "Legs", phase: "cooldown", hold: 45,
+      setup: "From all fours, bring your right knee forward and place the shin across in front of you, right foot toward your left hand. Extend the left leg straight back.",
+      execute: "Keep your hips square and level, then walk your hands forward and lower your chest toward the floor. Deep glute and hip stretch. Breathe into it and swap sides.",
+      mistake: "Letting the hips rotate so all your weight dumps onto one side. Keep them level, even if that means less depth. Put a cushion under the hip if you need it." },
+
+    { name: "Calf Wall Stretch", muscle: "Mobility", target: "Legs", phase: "cooldown", hold: 40,
+      setup: "Hands on a wall, one foot back with the leg straight and the heel pressed flat to the floor. Toes pointing straight ahead.",
+      execute: "Lean into the wall until you feel the stretch through the calf. Hold, then bend the back knee slightly to shift the stretch lower into the soleus and Achilles. Do both positions each side.",
+      mistake: "Letting the back heel lift off the floor, or turning the foot out to fake extra range. Heel down, toes forward, even if the stretch feels smaller." },
+
+    { name: "Cross-Body Shoulder Stretch", muscle: "Mobility", target: "Shoulders", phase: "cooldown", hold: 30,
+      setup: "Stand or sit tall. Bring one arm straight across your chest at shoulder height.",
+      execute: "Use the opposite forearm to gently draw it closer to your chest. Keep the shoulder of the stretching arm pressed down, not shrugged up. Hold and breathe, then swap.",
+      mistake: "Pulling on the elbow joint itself and letting the shoulder ride up. Hook above the elbow, keep the shoulder low, and you'll feel it in the rear delt where it belongs." },
+
+    { name: "Triceps Overhead Stretch", muscle: "Mobility", target: "Arms", phase: "cooldown", hold: 30,
+      setup: "Reach one arm overhead, then bend the elbow so your hand drops behind your head between your shoulder blades.",
+      execute: "Use your other hand to gently press the elbow back and down. Keep your ribs pulled down so you're not arching your back to fake the range. Hold and swap.",
+      mistake: "Flaring the ribs and arching the lower back to get the elbow further back. Brace the core first, then stretch what's actually there." },
+
+    { name: "Child's Pose", muscle: "Mobility", target: "Back", phase: "cooldown", hold: 45,
+      setup: "Kneel down, big toes together, knees wide apart. Sit your hips back toward your heels.",
+      execute: "Reach your arms out long in front and let your chest sink toward the floor. Breathe deep into your back ribs. Walk the hands over to each side to get into the lats.",
+      mistake: "Holding tension in the shoulders and hips instead of relaxing into it. This one's a decompression, let everything go heavy and just breathe." },
+
+    { name: "Cobra Stretch", muscle: "Mobility", target: "Core", phase: "cooldown", hold: 30,
+      setup: "Lie face down, hands flat under your shoulders, legs straight and together, tops of the feet on the floor.",
+      execute: "Press gently through the hands to lift your chest, keeping your hips down on the floor. Push only as far as feels comfortable through the lower back. Shoulders down, chest open, breathe.",
+      mistake: "Cranking up into a big extension and pinching the lower back. Keep the elbows slightly bent and the hips glued down. Comfortable range only on this one." }
+  ];
+
+  MOBILITY.forEach(function (m) { EXERCISES.push(m); });
+
+  var MUSCLES = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Cardio", "Mobility"];
+
+  var ROUTINES = {
+    "Push": ["Bench Press", "Overhead Press", "Incline Bench Press", "Tricep Pushdown", "Lateral Raise"],
+    "Pull": ["Deadlift", "Pull Ups", "Barbell Row", "Bicep Curl", "Lat Pulldown"],
+    "Legs": ["Squat", "Leg Press", "Lunges", "Leg Curl", "Calf Raise"],
+    "Full Body": ["Squat", "Bench Press", "Barbell Row", "Overhead Press", "Plank"],
+    "Cardio": [],
+    "Quick": [],
+    "Warm Up": MOBILITY.filter(function (m) { return m.phase === "warmup"; }).map(function (m) { return m.name; }),
+    "Stretch": MOBILITY.filter(function (m) { return m.phase === "cooldown"; }).map(function (m) { return m.name; })
+  };
+  var ROUTINE_ORDER = ["Quick", "Warm Up", "Push", "Pull", "Legs", "Full Body", "Cardio", "Stretch"];
+  var REST_SECONDS = 90;
+
+  /* ============ state ============ */
+  var state = {
+    tab: "home",
+    activeWorkout: null,
+    selectedRoutine: "Quick",
+    goals: { bodyweight: null, perWeek: null, lifts: [] },
+    workouts: [],
+    bodyweights: [],
+    customExercises: {},
+    dbAvailable: null,
+    openHistoryId: null,
+    exSearchQuery: "",
+    exDetailName: null,
+    exOpenGroups: {},
+    viewingWorkout: false,
+    elapsedHandle: null,
+    restEndsAt: null,
+    restExIdx: null,
+    flashSet: null,
+    focusNext: null,
+    lastTab: null,
+    restTimerHandle: null,
+    finishSummary: null
+  };
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  /* ============ storage: local fallback ============ */
+  var LS_W = "repledger_workouts_v2", LS_BW = "repledger_bw_v2", LS_CE = "repledger_customex_v2";
+  function localLoad() {
+    try { state.workouts = JSON.parse(localStorage.getItem(LS_W) || "[]"); } catch (e) { state.workouts = []; }
+    try { state.bodyweights = JSON.parse(localStorage.getItem(LS_BW) || "[]"); } catch (e) { state.bodyweights = []; }
+    try { state.customExercises = JSON.parse(localStorage.getItem(LS_CE) || "{}"); } catch (e) { state.customExercises = {}; }
+    loadGoalsLocal();
+  }
+  function localSaveW() { localStorage.setItem(LS_W, JSON.stringify(state.workouts)); }
+  function localSaveBW() { localStorage.setItem(LS_BW, JSON.stringify(state.bodyweights)); }
+  function localSaveCE() { localStorage.setItem(LS_CE, JSON.stringify(state.customExercises)); }
+
+  var db = null;
+
+  var store = {
+    async saveWorkout(w) {
+      w.createdAt = Date.now();
+      if (db) { var ref = await db.collection("workouts").add(w); w.id = ref.id; }
+      else { w.id = uid(); state.workouts.unshift(w); localSaveW(); }
+    },
+    async deleteWorkout(id) {
+      if (db) await db.doc("workouts/" + id).delete();
+      else { state.workouts = state.workouts.filter(function (w) { return w.id !== id; }); localSaveW(); }
+    },
+    async logBodyweight(weight) {
+      var entry = { weight: weight, date: new Date().toISOString(), createdAt: Date.now() };
+      if (db) { var ref = await db.collection("bodyweight").add(entry); entry.id = ref.id; state.bodyweights.unshift(entry); }
+      else { entry.id = uid(); state.bodyweights.unshift(entry); localSaveBW(); }
+    },
+    async addCustomExercise(name, muscle) {
+      if (state.customExercises[name] || EXERCISES.some(function (e) { return e.name.toLowerCase() === name.toLowerCase(); })) return;
+      state.customExercises[name] = muscle || "Other";
+      if (db) { try { await db.doc("meta/customExercises").set({ map: state.customExercises }); } catch (e) {} }
+      else localSaveCE();
+    }
+  };
+
+  /* ---- in-progress workout is saved continuously, not just on Finish ---- */
+  var LS_DRAFT = "repledger_active_v1";
+  var draftTimer = null;
+
+  function saveDraft() {
+    if (!state.activeWorkout) return;
+    try { localStorage.setItem(LS_DRAFT, JSON.stringify(state.activeWorkout)); } catch (e) {}
+    if (db) {
+      clearTimeout(draftTimer);
+      draftTimer = setTimeout(function () {
+        try { db.doc("drafts/active").set(state.activeWorkout); } catch (e) {}
+      }, 1500);
+    }
+  }
+
+  function clearDraft() {
+    clearTimeout(draftTimer);
+    try { localStorage.removeItem(LS_DRAFT); } catch (e) {}
+    if (db) { try { db.doc("drafts/active").delete(); } catch (e) {} }
+  }
+
+  async function restoreDraft() {
+    if (state.activeWorkout) return;
+    var d = null;
+    try { d = JSON.parse(localStorage.getItem(LS_DRAFT) || "null"); } catch (e) {}
+    if (!d && db) {
+      try { var snap = await db.doc("drafts/active").get(); if (snap.exists) d = snap.data(); } catch (e) {}
+    }
+    if (!d || !d.exercises || !d.startedAt) return;
+    // anything older than 12h is stale - drop it rather than resurrect yesterday's session
+    if (Date.now() - d.startedAt > 12 * 3600 * 1000) { clearDraft(); return; }
+    state.activeWorkout = d;
+    state.viewingWorkout = false;
+    render();
+  }
+
+  function sortWorkouts() { state.workouts.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); }
+  function sortBW() { state.bodyweights.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); }
+
+  async function initDb() {
+    db = await window.claude.use("db");
+    state.dbAvailable = !!db;
+    if (!db) { localLoad(); render(); restoreDraft(); return; }
+    try {
+      var ceSnap = await db.doc("meta/customExercises").get();
+      if (ceSnap.exists) { var d = ceSnap.data(); state.customExercises = d.map || {}; }
+    } catch (e) {}
+    loadGoalsLocal();
+    try {
+      var gSnap = await db.doc("goals/main").get();
+      if (gSnap.exists) {
+        var gd = gSnap.data();
+        state.goals = { bodyweight: gd.bodyweight || null, bodyweightStart: gd.bodyweightStart || null,
+                        perWeek: gd.perWeek || null, lifts: gd.lifts || [] };
+      }
+    } catch (e) {}
+    db.collection("workouts").orderBy("createdAt", "desc").limit(80).onSnapshot(function (snap) {
+      state.workouts = snap.docs.map(function (d) {
+        var b = d.data() || {};
+        return { id: d.id, date: b.date, createdAt: b.createdAt, durationSec: b.durationSec || 0, exercises: b.exercises || [] };
+      });
+      sortWorkouts();
+      render();
+      restoreDraft();
+    }, function () { render(); });
+    db.collection("bodyweight").orderBy("createdAt", "desc").limit(200).onSnapshot(function (snap) {
+      state.bodyweights = snap.docs.map(function (d) {
+        var b = d.data() || {};
+        return { id: d.id, date: b.date, createdAt: b.createdAt, weight: b.weight };
+      });
+      sortBW();
+      render();
+    }, function () {});
+  }
+
+  if (window.claude && typeof window.claude.use === "function") initDb();
+  else { localLoad(); state.dbAvailable = false; render(); restoreDraft(); }
+
+  /* ============ helpers ============ */
+  function exerciseDef(name) {
+    return EXERCISES.find(function (e) { return e.name.toLowerCase() === name.toLowerCase(); }) || null;
+  }
+  function isHold(name) {
+    var d = exerciseDef(name);
+    return !!(d && d.hold);
+  }
+  function defaultHold(name) {
+    var d = exerciseDef(name);
+    return d && d.hold ? d.hold : 30;
+  }
+  function unitOf(name) {
+    var d = exerciseDef(name);
+    return (d && d.unit) ? d.unit : "s";
+  }
+
+  function muscleOf(name) {
+    var found = EXERCISES.find(function (e) { return e.name.toLowerCase() === name.toLowerCase(); });
+    if (found) return found.muscle;
+    return state.customExercises[name] || "Other";
+  }
+  function fmtW(w) { var n = Number(w); return isNaN(n) ? "-" : (n % 1 === 0 ? n : n.toFixed(1)); }
+  function setsSummary(sets, name) {
+    if (!sets || !sets.length) return "-";
+    if (name && isHold(name)) {
+      var u = unitOf(name);
+      return sets.map(function (s) { return s.reps + u; }).join(", ");
+    }
+    return sets.map(function (s) { return fmtW(s.weight) + "kg\u00d7" + s.reps; }).join(", ");
+  }
+  function sessionVolume(ex) { return (ex.sets || []).reduce(function (s, x) { return s + (Number(x.weight) || 0) * (Number(x.reps) || 0); }, 0); }
+  function workoutVolume(w) { return (w.exercises || []).reduce(function (s, ex) { return s + sessionVolume(ex); }, 0); }
+  function workoutSetCount(w) { return (w.exercises || []).reduce(function (n, ex) { return n + (ex.sets ? ex.sets.length : 0); }, 0); }
+  function shortDate(iso) { return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }); }
+  function fmtDuration(sec) { if (!sec) return "\u2014"; var m = Math.round(sec / 60); return m + " min"; }
+  function fmtClock(sec) {
+    sec = Math.max(0, sec);
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function bestWeightBefore(exerciseName, excludeWorkoutId) {
+    var best = 0;
+    state.workouts.forEach(function (w) {
+      if (w.id === excludeWorkoutId) return;
+      (w.exercises || []).forEach(function (ex) {
+        if (ex.name.toLowerCase() === exerciseName.toLowerCase()) {
+          (ex.sets || []).forEach(function (s) { if (Number(s.weight) > best) best = Number(s.weight); });
+        }
+      });
+    });
+    return best;
+  }
+  function findLastInstance(exerciseName, excludeWorkoutId) {
+    var norm = exerciseName.toLowerCase();
+    for (var i = 0; i < state.workouts.length; i++) {
+      var w = state.workouts[i];
+      if (excludeWorkoutId && w.id === excludeWorkoutId) continue;
+      for (var j = 0; j < w.exercises.length; j++) {
+        if (w.exercises[j].name.toLowerCase() === norm) return w.exercises[j];
+      }
+    }
+    return null;
+  }
+  function allExerciseNames() {
+    var set = {};
+    EXERCISES.forEach(function (e) { set[e.name] = true; });
+    Object.keys(state.customExercises).forEach(function (n) { set[n] = true; });
+    state.workouts.forEach(function (w) { w.exercises.forEach(function (ex) { set[ex.name] = true; }); });
+    return Object.keys(set).sort(function (a, b) { return a.localeCompare(b); });
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
+  }
+  function startOfWeek(d) {
+    var day = d.getDay();
+    var diff = (day === 0 ? -6 : 1) - day;
+    var r = new Date(d); r.setDate(d.getDate() + diff); r.setHours(0,0,0,0); return r;
+  }
+
+  /* ============ rest timer ============ */
+  function startRestTimer(exIdx) {
+    state.restEndsAt = Date.now() + REST_SECONDS * 1000;
+    state.restExIdx = (exIdx === undefined) ? null : exIdx;
+    if (state.restTimerHandle) clearInterval(state.restTimerHandle);
+    state.restTimerHandle = setInterval(function () {
+      if (!state.restEndsAt) { stopRestTimer(); return; }
+      var remain = Math.ceil((state.restEndsAt - Date.now()) / 1000);
+      if (remain <= 0) {
+        state.restEndsAt = null;
+        state.restExIdx = null;
+        stopRestTimer();
+        // one redraw to remove the banner; drafts live in state so nothing is lost
+        if (state.activeWorkout && state.viewingWorkout) renderWorkoutScreen();
+        return;
+      }
+      var el = document.querySelector(".rest-banner .rt");
+      if (el) el.textContent = fmtClock(remain);
+    }, 1000);
+  }
+  function stopRestTimer() {
+    if (state.restTimerHandle) { clearInterval(state.restTimerHandle); state.restTimerHandle = null; }
+  }
+  function skipRest() {
+    state.restEndsAt = null;
+    state.restExIdx = null;
+    stopRestTimer();
+    renderWorkoutScreen();
+  }
+
+  function startElapsedTimer() {
+    stopElapsedTimer();
+    state.elapsedHandle = setInterval(function () {
+      if (!state.activeWorkout) { stopElapsedTimer(); return; }
+      var el = document.querySelector(".elapsed");
+      if (el) el.textContent = fmtClock(Math.floor((Date.now() - state.activeWorkout.startedAt) / 1000));
+    }, 1000);
+  }
+  function stopElapsedTimer() {
+    if (state.elapsedHandle) { clearInterval(state.elapsedHandle); state.elapsedHandle = null; }
+  }
+
+  /* ============ svg helpers ============ */
+  function sparkline(values, w, h, color) {
+    if (!values.length) return '<svg viewBox="0 0 ' + w + ' ' + h + '"></svg>';
+    var max = Math.max.apply(null, values), min = Math.min.apply(null, values);
+    if (max === min) { max += 1; min -= 1; }
+    var step = values.length > 1 ? w / (values.length - 1) : 0;
+    var pts = values.map(function (v, i) {
+      var x = i * step;
+      var y = h - ((v - min) / (max - min)) * (h - 8) - 4;
+      return x.toFixed(1) + "," + y.toFixed(1);
+    }).join(" ");
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" preserveAspectRatio="none">' +
+      '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg>';
+  }
+  function youtubeLinkHtml(name) {
+    var q = encodeURIComponent(name + " proper form technique");
+    return '<a class="yt-link" href="https://www.youtube.com/results?search_query=' + q + '" target="_blank" rel="noopener noreferrer">' +
+      '<span class="yt-ic">\u25B6</span><span>Watch a demo on YouTube</span><span class="yt-go">\u2197</span></a>';
+  }
+
+
+  /* ============ render root ============ */
+  var view = document.getElementById("view");
+  function render() {
+    updateTopbar();
+    var tabChanged = state.lastTab !== state.tab;
+    state.lastTab = state.tab;
+    var oldBar = document.querySelector(".resume-bar");
+    if (oldBar) oldBar.remove();
+    if (state.finishSummary) { renderFinishOverlay(); return; }
+    if (state.activeWorkout && state.viewingWorkout) { renderWorkoutScreen(); return; }
+    stopElapsedTimer();
+    if (state.tab === "home") renderHome();
+    else if (state.tab === "exercises") renderExercisesTab();
+    else if (state.tab === "history") renderHistory();
+    else if (state.tab === "goals") renderGoals();
+    else renderProgress();
+    if (tabChanged) {
+      view.classList.remove("screen-in");
+      void view.offsetWidth;
+      view.classList.add("screen-in");
+    }
+    if (state.activeWorkout) renderResumeBar();
+  }
+
+  function renderResumeBar() {
+    var bar = document.createElement("button");
+    bar.className = "resume-bar";
+    bar.innerHTML = '<span>Workout in progress</span><span class="resume-cta">Resume \u203a</span>';
+    document.getElementById("app").appendChild(bar);
+    bar.addEventListener("click", function () {
+      state.viewingWorkout = true;
+      render();
+    });
+  }
+
+  /* ---- progression: XP, levels, streaks ---- */
+  function xpStats() {
+    var chrono = state.workouts.slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    var sets = 0, prs = 0, best = {};
+    chrono.forEach(function (w) {
+      (w.exercises || []).forEach(function (ex) {
+        sets += (ex.sets || []).length;
+        if (isHold(ex.name)) return;
+        var top = (ex.sets || []).reduce(function (m, x) { return Math.max(m, Number(x.weight) || 0); }, 0);
+        if (top <= 0) return;
+        if (best[ex.name] === undefined) best[ex.name] = top;
+        else if (top > best[ex.name]) { prs++; best[ex.name] = top; }
+      });
+    });
+    var xp = chrono.length * 50 + sets * 5 + prs * 100;
+    var lvl = 1;
+    while (xp >= 100 * lvl * (lvl + 1) / 2) lvl++;
+    var floor = 100 * (lvl - 1) * lvl / 2;
+    var ceil = 100 * lvl * (lvl + 1) / 2;
+    return { xp: xp, level: lvl, into: xp - floor, need: ceil - floor,
+             pct: Math.min(100, Math.round((xp - floor) / (ceil - floor) * 100)),
+             prs: prs, sets: sets, workouts: chrono.length };
+  }
+
+  function dayStreak() {
+    var days = {};
+    state.workouts.forEach(function (w) { days[new Date(w.date).toDateString()] = true; });
+    var d = new Date(); d.setHours(0, 0, 0, 0);
+    if (!days[d.toDateString()]) d.setDate(d.getDate() - 1);
+    var n = 0;
+    while (days[d.toDateString()]) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+
+  function workoutsThisWeek() {
+    var ws = startOfWeek(new Date());
+    return state.workouts.filter(function (w) { return new Date(w.date) >= ws; }).length;
+  }
+
+  function workoutsThisMonth() {
+    var n = new Date();
+    return state.workouts.filter(function (w) {
+      var d = new Date(w.date);
+      return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+    }).length;
+  }
+
+  function currentBestFor(name) {
+    var best = 0;
+    state.workouts.forEach(function (w) {
+      (w.exercises || []).forEach(function (ex) {
+        if (ex.name.toLowerCase() !== name.toLowerCase()) return;
+        (ex.sets || []).forEach(function (s) { if (Number(s.weight) > best) best = Number(s.weight); });
+      });
+    });
+    return best;
+  }
+
+  function activeGoalCount() {
+    var g = state.goals || {};
+    return (g.bodyweight ? 1 : 0) + (g.perWeek ? 1 : 0) + ((g.lifts || []).length);
+  }
+
+  async function saveGoals() {
+    try { localStorage.setItem("repledger_goals_v1", JSON.stringify(state.goals)); } catch (e) {}
+    if (db) { try { await db.doc("goals/main").set(state.goals); } catch (e) {} }
+  }
+
+  function loadGoalsLocal() {
+    try {
+      var g = JSON.parse(localStorage.getItem("repledger_goals_v1") || "null");
+      if (g) state.goals = { bodyweight: g.bodyweight || null, perWeek: g.perWeek || null, lifts: g.lifts || [] };
+    } catch (e) {}
+  }
+
+  /* ---- history summarising ---- */
+  // MET values (Compendium of Physical Activities). Resistance training sits ~5.0;
+  // these drive a body-weight based estimate, never a measurement.
+  var MET_BY_NAME = { "Running": 9.8, "Cycling": 7.0, "Rowing": 7.0, "Jump Rope": 12.3, "Stair Climber": 9.0 };
+  function metFor(name) {
+    if (MET_BY_NAME[name]) return MET_BY_NAME[name];
+    var m = muscleOf(name);
+    if (m === "Mobility") return 2.3;
+    if (m === "Cardio") return 7.0;
+    return 5.0;
+  }
+
+  function latestBodyweight() {
+    return state.bodyweights && state.bodyweights[0] ? Number(state.bodyweights[0].weight) : null;
+  }
+
+  // returns null when body weight is unknown - we show a dash rather than invent a number
+  function estimateCalories(w) {
+    var bw = latestBodyweight();
+    if (!bw) return null;
+    var kcal = 0, timedMin = 0, liftSets = 0;
+    (w.exercises || []).forEach(function (ex) {
+      var sets = ex.sets || [];
+      if (isHold(ex.name)) {
+        var mins = sets.reduce(function (t, s) {
+          var v = Number(s.reps) || 0;
+          return t + (unitOf(ex.name) === "min" ? v : v / 60);
+        }, 0);
+        timedMin += mins;
+        kcal += metFor(ex.name) * 3.5 * bw / 200 * mins;
+      } else {
+        liftSets += sets.length;
+      }
+    });
+    var leftoverMin = w.durationSec ? Math.max(0, w.durationSec / 60 - timedMin) : liftSets * 2.5;
+    var leftoverMet = 5.0;
+    if (liftSets === 0) {
+      var mets = (w.exercises || []).map(function (ex) { return metFor(ex.name); });
+      leftoverMet = mets.length ? mets.reduce(function (x, y) { return x + y; }, 0) / mets.length : 2.3;
+    }
+    kcal += leftoverMet * 3.5 * bw / 200 * leftoverMin;
+    return Math.round(kcal);
+  }
+
+  function muscleTally(w) {
+    var counts = {};
+    (w.exercises || []).forEach(function (ex) {
+      var m = muscleOf(ex.name);
+      counts[m] = (counts[m] || 0) + (ex.sets ? ex.sets.length : 0);
+    });
+    return counts;
+  }
+
+  function sessionName(w) {
+    var counts = muscleTally(w);
+    var keys = Object.keys(counts).filter(function (k) { return counts[k] > 0; });
+    if (!keys.length) return "Workout";
+    var lifting = keys.filter(function (k) { return k !== "Cardio" && k !== "Mobility"; });
+    if (!lifting.length) return keys.indexOf("Cardio") >= 0 ? "Cardio" : "Mobility";
+    var has = {};
+    lifting.forEach(function (k) { has[k] = true; });
+    if (lifting.length >= 4) return "Full Body";
+    if (has.Chest && (has.Shoulders || has.Arms) && !has.Back) return "Push";
+    if (has.Back && !has.Chest) return "Pull";
+    var sorted = lifting.sort(function (a, b) { return counts[b] - counts[a]; });
+    if (sorted[0] === "Legs") return "Legs";
+    return sorted.slice(0, 2).join(" & ");
+  }
+
+  function muscleTags(w, max) {
+    var counts = muscleTally(w);
+    return Object.keys(counts)
+      .filter(function (k) { return counts[k] > 0; })
+      .sort(function (a, b) { return counts[b] - counts[a]; })
+      .slice(0, max || 3);
+  }
+
+  function relDate(iso) {
+    var d = new Date(iso); d.setHours(0, 0, 0, 0);
+    var t = new Date(); t.setHours(0, 0, 0, 0);
+    var days = Math.round((t - d) / 86400000);
+    if (days <= 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 7) return days + " days ago";
+    return shortDate(iso);
+  }
+
+  // the set you'd actually remember: heaviest lift, else longest timed effort
+  function topSetLabel(w) {
+    var lift = null, timed = null;
+    (w.exercises || []).forEach(function (ex) {
+      (ex.sets || []).forEach(function (s) {
+        if (isHold(ex.name)) {
+          var v = Number(s.reps) || 0;
+          if (!timed || v > timed.val) timed = { name: ex.name, val: v, unit: unitOf(ex.name) };
+        } else {
+          var wt = Number(s.weight) || 0;
+          if (wt > 0 && (!lift || wt > lift.val)) lift = { name: ex.name, val: wt, reps: s.reps };
+        }
+      });
+    });
+    if (lift) return lift.name + " " + fmtW(lift.val) + " \u00d7 " + lift.reps;
+    if (timed) return timed.name + " " + timed.val + timed.unit;
+    return null;
+  }
+
+  function forgeMark() {
+    return '<svg class="tb-mark" viewBox="0 0 40 40" aria-hidden="true">' +
+      '<path d="M20 3.5 A16.5 16.5 0 0 1 35.6 14.6" fill="none" stroke="var(--accent)" stroke-width="4.2" stroke-linecap="round"/>' +
+      '<path d="M36.2 20.8 A16.5 16.5 0 0 1 24.6 35.9" fill="none" stroke="var(--accent)" stroke-width="3.4" stroke-linecap="round"/>' +
+      '<path d="M17.2 36.2 A16.5 16.5 0 0 1 4.3 25.4" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>' +
+      '<path d="M4.1 17.4 A16.5 16.5 0 0 1 10.6 6.9" fill="none" stroke="var(--accent)" stroke-width="2.8" stroke-linecap="round"/>' +
+      '<path d="M15.2 10.5 L28 10.5 L26 15.2 L19.6 15.2 L19 19.4 L24.6 19.4 L22.8 24 L18.3 24 L16.4 31.5 L11.6 31.5 Z" fill="var(--ink)"/>' +
+      '</svg>';
+  }
+
+  /* ---- keep the page where the user left it across re-renders ---- */
+  function paint(fn) {
+    var y = view.scrollTop;
+    fn();
+    view.scrollTop = y;
+  }
+
+  function buzz(ms) {
+    try { if (navigator.vibrate) navigator.vibrate(ms || 15); } catch (e) {}
+  }
+
+  /* ---- sticky banner, same on every screen ---- */
+  function updateTopbar() {
+    var bar = document.getElementById("topbar");
+    if (!bar) return;
+    var title = "Forge", right = "", momentum = "";
+
+    if (state.activeWorkout && state.viewingWorkout) {
+      var w = state.activeWorkout;
+      title = sessionName(w) === "Workout" ? "Workout" : sessionName(w);
+      right = '<span class="elapsed">' +
+        (w.backdated ? shortDate(w.date) : fmtClock(Math.floor((Date.now() - w.startedAt) / 1000))) + '</span>';
+    } else if (state.tab === "home") {
+      var x = xpStats(), streak = dayStreak(), wk = workoutsThisWeek();
+      right = '<span class="tb-right">' + new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" }) + '</span>';
+      momentum = '<div class="momentum">' +
+        '<div class="mo-row"><span class="mo-lvl">Level ' + x.level + '</span>' +
+          '<span class="mo-xp">' + x.into + ' / ' + x.need + ' XP</span></div>' +
+        '<div class="mo-track"><div class="mo-fill" style="width:' + x.pct + '%"></div></div>' +
+        '<div class="mo-sub">' + wk + ' this week' +
+          (streak > 1 ? ' \u00b7 ' + streak + '-day streak \ud83d\udd25' : '') +
+          (x.prs ? ' \u00b7 ' + x.prs + ' PRs' : '') + '</div>' +
+        '</div>';
+    } else if (state.tab === "exercises") {
+      title = state.exDetailName ? "Exercise" : "Exercises";
+      right = '<span class="tb-right">' + allExerciseNames().length + ' total</span>';
+    } else if (state.tab === "history") {
+      title = "History";
+      right = '<span class="tb-right">' + workoutsThisMonth() + ' this month</span>';
+    } else if (state.tab === "progress") {
+      title = "Progress";
+      var bw = latestBodyweight();
+      right = '<span class="tb-right">' + (bw ? fmtW(bw) + ' kg' : '\u2014') + '</span>';
+    } else if (state.tab === "goals") {
+      title = "Goals";
+      right = '<span class="tb-right">' + activeGoalCount() + ' active</span>';
+    }
+
+    var isHome = (state.tab === "home" && !(state.activeWorkout && state.viewingWorkout));
+    bar.innerHTML = '<div class="tb-main">' +
+      '<span class="tb-brand">' + (isHome ? forgeMark() : '') +
+        '<span class="tb-title' + (isHome ? ' wordmark' : '') + '">' + escapeHtml(title) + '</span></span>' +
+      right + '</div>' + momentum;
+  }
+
+  /* ============ HOME ============ */
+  function renderHome() {
+    var html = "";
+    if (state.dbAvailable === false) html += '<div class="offline-note">Saved on this device only \u2014 storage isn\u2019t connected.</div>';
+
+    html += '<div class="routine-grid">';
+    ROUTINE_ORDER.forEach(function (r) {
+      var list = ROUTINES[r] || [];
+      var sub = list.length ? list.length + " exercises" : (r === "Quick" ? "Build as you go" : "Add your own");
+      html += '<button class="routine-tile' + (state.selectedRoutine === r ? ' active' : '') + '" data-routine="' + r + '">' +
+        '<span class="rt-name">' + r + '</span>' +
+        '<span class="rt-sub">' + sub + '</span>' +
+        '</button>';
+    });
+    html += '</div>';
+
+    var preview = ROUTINES[state.selectedRoutine] || [];
+    html += '<div class="card today-card">' +
+      '<div class="routine-name">' + (state.selectedRoutine === "Quick" ? "Quick Workout" : state.selectedRoutine + " Day") + '</div>' +
+      '<div class="ex-preview">' + (preview.length ? preview.join(" \u00b7 ") : "Add exercises as you go") + '</div>' +
+      '<button class="big-cta" id="startBtn">Start Workout</button>' +
+      '</div>';
+
+    var last = state.workouts[0];
+    html += '<div class="section-title">Last Workout</div>';
+    if (last) {
+      var lastKcal = estimateCalories(last);
+      var lastTop = topSetLabel(last);
+      html += '<div class="card last-card"><div class="row-between">' +
+        '<div><div class="hist-title"><span class="hist-name">' + escapeHtml(sessionName(last)) + '</span>' +
+          '<span class="hist-when">' + relDate(last.date) + '</span></div>' +
+        '<div class="muted" style="font-size:12px;margin-top:3px">' + workoutSetCount(last) + (workoutSetCount(last) === 1 ? ' set' : ' sets') +
+          (lastTop ? ' \u00b7 ' + escapeHtml(lastTop) : '') + '</div></div>' +
+        '<div class="hist-kcal">' + (lastKcal !== null ? '<span class="stat-num">~' + lastKcal + '</span><span class="kcal-u">kcal</span>' : '<span class="kcal-na">\u2014</span>') + '</div>' +
+        '</div></div>';
+    } else {
+      html += '<div class="card muted" style="text-align:center;padding:20px">No workouts yet</div>';
+    }
+
+    var bw = state.bodyweights[0];
+    html += '<div class="section-title">Body Weight</div>';
+    html += '<div class="card bw-box">' +
+      '<div><span class="stat-num">' + (bw ? fmtW(bw.weight) : "--") + '</span><span class="muted" style="font-size:13px"> kg</span>' +
+      (bw ? '<div class="muted" style="font-size:11px;margin-top:2px">' + shortDate(bw.date) + '</div>' : '') + '</div>' +
+      '<button class="secondary" id="logBwBtn">Log Weight</button>' +
+      '</div>';
+
+    var now = new Date();
+    var thisWeekStart = startOfWeek(now);
+    var lastWeekStart = new Date(thisWeekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    var thisWeekCount = 0, lastWeekCount = 0;
+    var dayVol = [0,0,0,0,0,0,0];
+    state.workouts.forEach(function (w) {
+      var d = new Date(w.date);
+      if (d >= thisWeekStart) {
+        thisWeekCount++;
+        var idx = (d.getDay() + 6) % 7;
+        dayVol[idx] += workoutVolume(w);
+      } else if (d >= lastWeekStart && d < thisWeekStart) {
+        lastWeekCount++;
+      }
+    });
+    var maxDay = Math.max.apply(null, dayVol.concat([1]));
+    var dayLbls = ["M","T","W","T","F","S","S"];
+    html += '<div class="section-title">This Week</div>';
+    html += '<div class="card">' +
+      '<div class="row-between"><div><span class="stat-num" style="font-size:24px">' + thisWeekCount + '</span><span class="muted" style="font-size:12px"> workouts</span></div>' +
+      '<span class="pill">' + (thisWeekCount >= lastWeekCount ? "\u2191" : "\u2193") + ' vs ' + lastWeekCount + ' last week</span></div>' +
+      '<div class="week-spark">' + dayVol.map(function (v) {
+        var h = Math.max(4, Math.round((v / maxDay) * 40));
+        return '<div class="bar' + (v > 0 ? ' filled' : '') + '" style="height:' + h + 'px"></div>';
+      }).join("") + '</div>' +
+      '<div class="week-spark">' + dayLbls.map(function (l) { return '<div class="lbl" style="flex:1">' + l + '</div>'; }).join("") + '</div>' +
+      '</div>';
+
+    view.innerHTML = html;
+
+    document.getElementById("startBtn").addEventListener("click", function () {
+      if (state.activeWorkout) { state.viewingWorkout = true; render(); return; }
+      var exList = (ROUTINES[state.selectedRoutine] || []).map(function (name) { return { name: name, muscle: muscleOf(name), sets: [], plannedSets: isHold(name) ? 1 : 3 }; });
+      state.activeWorkout = { date: new Date().toISOString(), startedAt: Date.now(), exercises: exList };
+      state.viewingWorkout = true;
+      saveDraft();
+      render();
+    });
+    document.getElementById("logBwBtn").addEventListener("click", function () {
+      var current = state.bodyweights[0] ? state.bodyweights[0].weight : "";
+      showNumberPrompt("Log body weight", "kg", current, function (n) {
+        store.logBodyweight(n).then(render);
+      });
+    });
+    view.querySelectorAll("[data-routine]").forEach(function (btn) {
+      btn.addEventListener("click", function () { state.selectedRoutine = btn.getAttribute("data-routine"); render(); });
+    });
+  }
+
+  /* ============ WORKOUT (active session) ============ */
+  function renderWorkoutScreen() {
+    var w = state.activeWorkout;
+    var html = "";
+
+    html += '<div class="workout-topbar"><span class="wk-label">Session</span>' +
+      '<button class="ghost danger" id="cancelWorkoutBtn">Cancel</button></div>';
+
+    w.exercises.forEach(function (ex, exIdx) {
+      var last = findLastInstance(ex.name);
+      var hold = isHold(ex.name);
+      var plannedCount = ex.plannedSets || (last ? last.sets.length : (hold ? 1 : 3)) || (hold ? 1 : 3);
+      var firstUndoneIdx = -1;
+
+      html += '<div class="ex-card"><div class="ex-name">' + escapeHtml(ex.name) + '</div>';
+      html += '<div class="last-time">Last time: ' + (last ? escapeHtml(setsSummary(last.sets, ex.name)) : 'no previous data') + '</div>';
+
+      for (var i = 0; i < Math.max(plannedCount, ex.sets.length); i++) {
+        var defReps = last && last.sets[i] ? last.sets[i].reps : (hold ? defaultHold(ex.name) : "");
+        var s = ex.sets[i] || { weight: last && last.sets[i] ? last.sets[i].weight : "", reps: defReps, done: false };
+        if (!s.done && firstUndoneIdx === -1) firstUndoneIdx = i;
+        var isActive = i === firstUndoneIdx;
+        var flash = (state.flashSet === exIdx + ":" + i) ? " flash" : "";
+        html += '<div class="set-line' + (hold ? ' hold' : '') + (s.done ? ' done' : '') + (isActive ? ' active' : '') + flash + '">' +
+          '<span class="sidx">' + (i + 1) + '</span>' +
+          (hold ? '' :
+            '<span class="wt-cell">' +
+              '<button class="step" data-step="' + exIdx + ':' + i + ':-1" ' + (s.done ? 'disabled' : '') + '>\u2212</button>' +
+              '<input type="number" inputmode="decimal" step="0.5" placeholder="kg" value="' + (s.weight === "" || s.weight === undefined ? "" : s.weight) + '" data-w="' + exIdx + ':' + i + '" ' + (s.done ? 'disabled' : '') + '>' +
+              '<button class="step" data-step="' + exIdx + ':' + i + ':1" ' + (s.done ? 'disabled' : '') + '>+</button>' +
+            '</span>') +
+          '<input type="number" inputmode="numeric" placeholder="' + (hold ? (unitOf(ex.name) === "min" ? "minutes" : "seconds") : "reps") + '" value="' + (s.reps === "" || s.reps === undefined ? "" : s.reps) + '" data-r="' + exIdx + ':' + i + '" ' + (s.done ? 'disabled' : '') + '>' +
+          '<button class="check-btn' + (s.done ? ' on' : '') + '" data-check="' + exIdx + ':' + i + '">\u2713</button>' +
+          '</div>';
+      }
+      if (state.restEndsAt && state.restExIdx === exIdx) {
+        var remain = Math.ceil((state.restEndsAt - Date.now()) / 1000);
+        html += '<div class="rest-banner pulsing"><span>Rest \u2014 <span class="rt">' + fmtClock(remain) + '</span></span>' +
+          '<button id="skipRestBtn">Skip</button></div>';
+      }
+      html += '<button class="add-set-link" data-addset="' + exIdx + '">+ Add set</button>';
+      html += '<div class="ex-remove"><button class="ghost danger" data-removeex="' + exIdx + '">Remove exercise</button></div>';
+      html += '</div>';
+    });
+
+    html += '<div class="section-title">Add Exercise</div>';
+    html += '<div class="add-ex-box"><input type="text" id="exSearch" placeholder="Search exercises\u2026" value="' + escapeHtml(state.exSearchQuery) + '" autocomplete="off"></div>';
+    html += '<div id="exSearchWrap">' + searchResultsHtml() + '</div>';
+
+    html += '<div class="finish-bar"><button class="big-cta" id="finishBtn">Finish Workout</button><button class="secondary" id="cancelWorkoutBtn2">Cancel</button></div>';
+
+    var keepY = view.scrollTop;
+    view.innerHTML = html;
+    view.scrollTop = keepY;
+    updateTopbar();
+
+    // weight steppers: 2.5 kg a tap, no keyboard needed
+    view.querySelectorAll("[data-step]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var p = btn.getAttribute("data-step").split(":");
+        var exI = Number(p[0]), sI = Number(p[1]), dir = Number(p[2]);
+        var target = w.exercises[exI];
+        if (!target) return;
+        var input = document.querySelector('[data-w="' + exI + ':' + sI + '"]');
+        var cur = input && input.value !== "" ? Number(input.value) : 0;
+        var next = Math.max(0, Math.round((cur + dir * 2.5) * 2) / 2);
+        if (input) input.value = next;
+        var st = target.sets[sI] || { weight: "", reps: "", done: false };
+        st.weight = next;
+        target.sets[sI] = st;
+        saveDraft();
+        buzz(8);
+      });
+    });
+
+    if (state.focusNext) {
+      var fp = state.focusNext.split(":");
+      var nextInput = document.querySelector('[data-w="' + fp[0] + ':' + fp[1] + '"]') ||
+                      document.querySelector('[data-r="' + fp[0] + ':' + fp[1] + '"]');
+      if (nextInput) { try { nextInput.focus({ preventScroll: true }); } catch (e) { nextInput.focus(); } }
+      state.focusNext = null;
+    }
+
+    if (!w.backdated) startElapsedTimer();
+    if (!state.restEndsAt) stopRestTimer();
+
+    document.getElementById("cancelWorkoutBtn").addEventListener("click", cancelWorkout);
+    document.getElementById("cancelWorkoutBtn2").addEventListener("click", cancelWorkout);
+    document.getElementById("finishBtn").addEventListener("click", finishWorkout);
+    var skipBtn = document.getElementById("skipRestBtn");
+    if (skipBtn) skipBtn.addEventListener("click", skipRest);
+
+    var exSearch = document.getElementById("exSearch");
+    exSearch.addEventListener("input", function (e) {
+      state.exSearchQuery = e.target.value;
+      updateSearchResults();
+    });
+
+    // drafts: anything typed is written straight into state
+    view.querySelectorAll("[data-w], [data-r]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        var isWeight = input.hasAttribute("data-w");
+        var parts = input.getAttribute(isWeight ? "data-w" : "data-r").split(":");
+        var exIdx = Number(parts[0]), sIdx = Number(parts[1]);
+        var ex = w.exercises[exIdx];
+        if (!ex) return;
+        var s = ex.sets[sIdx] || { weight: "", reps: "", done: false };
+        s[isWeight ? "weight" : "reps"] = input.value === "" ? "" : Number(input.value);
+        ex.sets[sIdx] = s;
+        saveDraft();
+      });
+    });
+
+    var addCustomBtn = document.getElementById("addCustomBtn");
+    if (addCustomBtn) addCustomBtn.addEventListener("click", addCustomFromSearch);
+    bindSearchResults();
+    view.querySelectorAll("[data-removeex]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        w.exercises.splice(Number(btn.getAttribute("data-removeex")), 1);
+        saveDraft();
+        renderWorkoutScreen();
+      });
+    });
+    view.querySelectorAll("[data-addset]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var exIdx = Number(btn.getAttribute("data-addset"));
+        w.exercises[exIdx].plannedSets = Math.max(w.exercises[exIdx].plannedSets || 3, w.exercises[exIdx].sets.length) + 1;
+        saveDraft();
+        renderWorkoutScreen();
+      });
+    });
+    view.querySelectorAll("[data-check]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var parts = btn.getAttribute("data-check").split(":");
+        var exIdx = Number(parts[0]), sIdx = Number(parts[1]);
+        var ex = w.exercises[exIdx];
+        var wInput = document.querySelector('[data-w="' + exIdx + ':' + sIdx + '"]');
+        var rInput = document.querySelector('[data-r="' + exIdx + ':' + sIdx + '"]');
+        var weight = (!wInput || wInput.value === "") ? 0 : Number(wInput.value);
+        var reps = rInput.value === "" ? 0 : Number(rInput.value);
+        if (!reps) { rInput.focus(); return; }
+        ex.sets[sIdx] = { weight: weight, reps: reps, done: true };
+        saveDraft();
+        buzz(18);
+        state.flashSet = exIdx + ":" + sIdx;
+        // hand focus to the next unfinished set so logging keeps flowing
+        var planned = Math.max(ex.plannedSets || 0, ex.sets.length);
+        var nextIdx = -1;
+        for (var q = sIdx + 1; q < planned; q++) {
+          if (!ex.sets[q] || !ex.sets[q].done) { nextIdx = q; break; }
+        }
+        state.focusNext = (nextIdx >= 0) ? exIdx + ":" + nextIdx : null;
+        if (!isHold(ex.name)) startRestTimer(exIdx);
+        renderWorkoutScreen();
+        state.flashSet = null;
+      });
+    });
+  }
+  function searchResultsHtml() {
+    var qRaw = state.exSearchQuery.trim();
+    if (!qRaw) return "";
+    var q = qRaw.toLowerCase();
+    var matches = allExerciseNames().filter(function (n) { return n.toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
+    var out = '<div class="search-results">';
+    matches.forEach(function (n) {
+      out += '<div class="search-item" data-pick="' + escapeHtml(n) + '"><span>' + escapeHtml(n) + '</span><span class="m">' + muscleOf(n) + '</span></div>';
+    });
+    if (!matches.length) out += '<div class="search-item"><span class="m">No match \u2014 tap below to add it as custom</span></div>';
+    out += '</div>';
+    if (!matches.length) {
+      out += '<button class="secondary" id="addCustomBtn" style="margin-top:8px;width:100%">Add "' + escapeHtml(qRaw) + '"</button>';
+    }
+    return out;
+  }
+
+  function addCustomFromSearch() {
+    var name = state.exSearchQuery.trim();
+    if (!name || !state.activeWorkout) return;
+    store.addCustomExercise(name, "Other");
+    state.activeWorkout.exercises.push({ name: name, muscle: "Other", sets: [], plannedSets: 3 });
+    state.exSearchQuery = "";
+    renderWorkoutScreen();
+  }
+
+  function bindSearchResults() {
+    var wrap = document.getElementById("exSearchWrap");
+    if (!wrap) return;
+    wrap.querySelectorAll("[data-pick]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var name = el.getAttribute("data-pick");
+        state.activeWorkout.exercises.push({ name: name, muscle: muscleOf(name), sets: [], plannedSets: isHold(name) ? 1 : 3 });
+        state.exSearchQuery = "";
+        saveDraft();
+        renderWorkoutScreen();
+      });
+    });
+    var btn = wrap.querySelector("#addCustomBtn");
+    if (btn) btn.addEventListener("click", addCustomFromSearch);
+  }
+
+  // updates ONLY the results list, so set inputs and keyboard focus are untouched
+  function updateSearchResults() {
+    var wrap = document.getElementById("exSearchWrap");
+    if (!wrap) return;
+    wrap.innerHTML = searchResultsHtml();
+    bindSearchResults();
+  }
+
+  function preserveFocus(el) { if (!el) return; el.focus(); var v = el.value; el.value = ""; el.value = v; }
+
+  /* ---- in-app dialogs (confirm/prompt are blocked in this frame) ---- */
+  function closeDialog() {
+    var d = document.querySelector(".dialog-overlay");
+    if (d) d.remove();
+  }
+
+  function showConfirm(title, body, confirmLabel, onConfirm) {
+    closeDialog();
+    var el = document.createElement("div");
+    el.className = "dialog-overlay";
+    el.innerHTML = '<div class="dialog">' +
+      '<h3>' + escapeHtml(title) + '</h3>' +
+      (body ? '<p>' + escapeHtml(body) + '</p>' : '') +
+      '<div class="dialog-actions">' +
+      '<button class="secondary" data-dlg="cancel">Keep going</button>' +
+      '<button class="dialog-danger" data-dlg="ok">' + escapeHtml(confirmLabel) + '</button>' +
+      '</div></div>';
+    document.getElementById("app").appendChild(el);
+    el.querySelector('[data-dlg="cancel"]').addEventListener("click", closeDialog);
+    el.querySelector('[data-dlg="ok"]').addEventListener("click", function () {
+      closeDialog();
+      onConfirm();
+    });
+    el.addEventListener("click", function (e) { if (e.target === el) closeDialog(); });
+  }
+
+  function showPickPrompt(title, options, onSubmit) {
+    closeDialog();
+    var el = document.createElement("div");
+    el.className = "dialog-overlay";
+    el.innerHTML = '<div class="dialog">' +
+      '<h3>' + escapeHtml(title) + '</h3>' +
+      '<input type="text" id="pickSearch" placeholder="Search\u2026" autocomplete="off">' +
+      '<div class="pick-list" id="pickList"></div>' +
+      '<div class="dialog-actions"><button class="secondary" data-dlg="cancel">Cancel</button></div>' +
+      '</div>';
+    document.getElementById("app").appendChild(el);
+    var listEl = el.querySelector("#pickList");
+    var search = el.querySelector("#pickSearch");
+    function paint() {
+      var q = search.value.trim().toLowerCase();
+      var shown = options.filter(function (o) { return !q || o.toLowerCase().indexOf(q) !== -1; }).slice(0, 40);
+      listEl.innerHTML = shown.map(function (o) {
+        return '<div class="pick-item" data-pickval="' + escapeHtml(o) + '">' + escapeHtml(o) + '</div>';
+      }).join("") || '<div class="pick-item muted">No match</div>';
+      listEl.querySelectorAll("[data-pickval]").forEach(function (item) {
+        item.addEventListener("click", function () {
+          var v = item.getAttribute("data-pickval");
+          closeDialog(); onSubmit(v);
+        });
+      });
+    }
+    paint();
+    search.addEventListener("input", paint);
+    el.querySelector('[data-dlg="cancel"]').addEventListener("click", closeDialog);
+    el.addEventListener("click", function (e) { if (e.target === el) closeDialog(); });
+  }
+
+  function showDatePrompt(title, onSubmit) {
+    closeDialog();
+    var today = new Date();
+    var iso = today.getFullYear() + "-" +
+      String(today.getMonth() + 1).padStart(2, "0") + "-" +
+      String(today.getDate()).padStart(2, "0");
+    var el = document.createElement("div");
+    el.className = "dialog-overlay";
+    el.innerHTML = '<div class="dialog">' +
+      '<h3>' + escapeHtml(title) + '</h3>' +
+      '<p>Pick the day it happened.</p>' +
+      '<input type="date" id="dlgDate" value="' + iso + '" max="' + iso + '">' +
+      '<div class="dialog-actions">' +
+      '<button class="secondary" data-dlg="cancel">Cancel</button>' +
+      '<button class="dialog-ok" data-dlg="ok">Continue</button>' +
+      '</div></div>';
+    document.getElementById("app").appendChild(el);
+    var input = el.querySelector("#dlgDate");
+    el.querySelector('[data-dlg="cancel"]').addEventListener("click", closeDialog);
+    el.querySelector('[data-dlg="ok"]').addEventListener("click", function () {
+      if (!input.value) { input.focus(); return; }
+      var parts = input.value.split("-");
+      var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+      closeDialog();
+      onSubmit(d);
+    });
+    el.addEventListener("click", function (e) { if (e.target === el) closeDialog(); });
+  }
+
+  function showNumberPrompt(title, unit, initial, onSubmit) {
+    closeDialog();
+    var el = document.createElement("div");
+    el.className = "dialog-overlay";
+    el.innerHTML = '<div class="dialog">' +
+      '<h3>' + escapeHtml(title) + '</h3>' +
+      '<input type="number" inputmode="decimal" step="0.1" id="dlgInput" placeholder="' + escapeHtml(unit) + '" value="' + (initial || "") + '">' +
+      '<div class="dialog-actions">' +
+      '<button class="secondary" data-dlg="cancel">Cancel</button>' +
+      '<button class="dialog-ok" data-dlg="ok">Save</button>' +
+      '</div></div>';
+    document.getElementById("app").appendChild(el);
+    var input = el.querySelector("#dlgInput");
+    input.focus();
+    function submit() {
+      var n = Number(input.value);
+      if (!n || n <= 0) { input.focus(); return; }
+      closeDialog();
+      onSubmit(n);
+    }
+    el.querySelector('[data-dlg="cancel"]').addEventListener("click", closeDialog);
+    el.querySelector('[data-dlg="ok"]').addEventListener("click", submit);
+    input.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
+    el.addEventListener("click", function (e) { if (e.target === el) closeDialog(); });
+  }
+
+  function cancelWorkout() {
+    showConfirm("Discard this workout?", "Nothing from this session will be saved.", "Discard", discardWorkout);
+  }
+
+  function discardWorkout() {
+    clearDraft();
+    stopRestTimer();
+    stopElapsedTimer();
+    state.restEndsAt = null;
+    state.restExIdx = null;
+    state.activeWorkout = null;
+    state.viewingWorkout = false;
+    render();
+  }
+
+  async function finishWorkout() {
+    var w = state.activeWorkout;
+    // a set counts if it was ticked OR simply filled in - typing the numbers is enough
+    var cleanExercises = w.exercises.map(function (ex) {
+      return { name: ex.name, sets: (ex.sets || []).filter(function (s) {
+          return s && (s.done || Number(s.reps) > 0);
+        }).map(function (s) { return { weight: Number(s.weight) || 0, reps: Number(s.reps) }; }) };
+    }).filter(function (ex) { return ex.sets.length > 0; });
+
+    // never bin a workout silently - say so and make the user choose
+    if (cleanExercises.length === 0) {
+      showConfirm("Nothing logged yet",
+        "No sets have been filled in, so there's nothing to save. Discard this session?",
+        "Discard", discardWorkout);
+      return;
+    }
+
+    var durationSec = w.backdated ? 0 : Math.floor((Date.now() - w.startedAt) / 1000);
+    var prCount = 0;
+    cleanExercises.forEach(function (ex) {
+      if (isHold(ex.name)) return;
+      var prevBest = bestWeightBefore(ex.name);
+      var newBest = Math.max.apply(null, ex.sets.map(function (s) { return Number(s.weight) || 0; }));
+      if (newBest > prevBest) prCount++;
+    });
+    var totalVolume = cleanExercises.reduce(function (sum, ex) { return sum + sessionVolume(ex); }, 0);
+    var totalSets = cleanExercises.reduce(function (n, ex) { return n + ex.sets.length; }, 0);
+
+    var toSave = { date: w.date, durationSec: durationSec, exercises: cleanExercises };
+
+    clearDraft();
+    stopRestTimer();
+    stopElapsedTimer();
+    state.restEndsAt = null;
+    state.restExIdx = null;
+    state.activeWorkout = null;
+    state.viewingWorkout = false;
+    state.finishSummary = { durationSec: durationSec, sets: totalSets, exercises: cleanExercises.length, volume: totalVolume, prCount: prCount,
+                            kcal: estimateCalories({ exercises: cleanExercises, durationSec: durationSec }) };
+    render();
+    await store.saveWorkout(toSave);
+  }
+
+  function renderFinishOverlay() {
+    var f = state.finishSummary;
+    renderHome();
+    var html = '<div class="overlay"><div class="finish-card">' +
+      '<div class="fire">\ud83d\udd25</div>' +
+      '<h2>Workout Complete</h2>' +
+      '<div class="finish-grid">' +
+      '<div><div class="stat-num fstat-num">' + fmtDuration(f.durationSec) + '</div><div class="fstat-label">Time</div></div>' +
+      '<div><div class="stat-num fstat-num">' + f.sets + '</div><div class="fstat-label">Sets</div></div>' +
+      '<div><div class="stat-num fstat-num">' + f.exercises + '</div><div class="fstat-label">Exercises</div></div>' +
+      '</div>' +
+      '<div class="stat-num finish-vol">' + Math.round(f.volume).toLocaleString() + ' kg</div>' +
+      '<div class="finish-vol-lbl">Total Volume</div>' +
+      (f.kcal !== null && f.kcal !== undefined ? '<div class="finish-kcal">~' + f.kcal + ' kcal burned <span>(estimate)</span></div>' : '') +
+      (f.prCount > 0 ? '<div class="pr-line">\ud83c\udfc6 ' + f.prCount + ' new PR' + (f.prCount > 1 ? 's' : '') + '</div>' : '') +
+      '<button class="big-cta" id="finishDoneBtn">Done</button>' +
+      '</div></div>';
+    view.insertAdjacentHTML("beforeend", html);
+    document.getElementById("finishDoneBtn").addEventListener("click", function () {
+      state.finishSummary = null;
+      render();
+    });
+  }
+
+  /* ============ EXERCISES TAB ============ */
+  function renderExercisesTab() {
+    if (state.exDetailName) { renderExerciseDetail(state.exDetailName); return; }
+    var html = '<input type="text" id="libSearch" placeholder="Search or select an exercise\u2026" value="' + escapeHtml(state.exSearchQuery) + '" autocomplete="off">';
+    var q = state.exSearchQuery.trim().toLowerCase();
+    var names = allExerciseNames().filter(function (n) { return !q || n.toLowerCase().indexOf(q) !== -1; });
+
+    html += '<div style="margin-top:10px">';
+    if (!names.length) {
+      html += '<div class="empty-state"><p>No exercises match.</p></div>';
+    } else if (q) {
+      // flat filtered list while searching
+      names.forEach(function (n) {
+        html += '<div class="ex-list-item" data-open="' + escapeHtml(n) + '"><span class="en">' + escapeHtml(n) + '</span><span class="pill">' + muscleOf(n) + '</span></div>';
+      });
+    } else {
+      // grouped by muscle, collapsible
+      var byMuscle = {};
+      names.forEach(function (n) {
+        var m = muscleOf(n);
+        (byMuscle[m] = byMuscle[m] || []).push(n);
+      });
+      var groupOrder = MUSCLES.concat(Object.keys(byMuscle).filter(function (m) { return MUSCLES.indexOf(m) === -1; }));
+      groupOrder.forEach(function (m) {
+        if (!byMuscle[m] || !byMuscle[m].length) return;
+        var open = !!state.exOpenGroups[m];
+        html += '<div class="ex-list-item" data-togglegroup="' + escapeHtml(m) + '" style="cursor:pointer">' +
+          '<span class="en">' + m + '</span>' +
+          '<span class="pill">' + byMuscle[m].length + (open ? ' \u2212' : ' +') + '</span></div>';
+        if (open) {
+          byMuscle[m].forEach(function (n) {
+            html += '<div class="ex-list-item" data-open="' + escapeHtml(n) + '" style="padding-left:14px">' +
+              '<span class="en" style="font-weight:500;font-size:14px">' + escapeHtml(n) + '</span><span class="muted" style="font-size:11px">\u203a</span></div>';
+          });
+        }
+      });
+    }
+    html += '</div>';
+    var keepY = view.scrollTop;
+    view.innerHTML = html;
+    view.scrollTop = keepY;
+    document.getElementById("libSearch").addEventListener("input", function (e) { state.exSearchQuery = e.target.value; renderExercisesTab(); preserveFocus(document.getElementById("libSearch")); });
+    view.querySelectorAll("[data-togglegroup]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var m = el.getAttribute("data-togglegroup");
+        state.exOpenGroups[m] = !state.exOpenGroups[m];
+        renderExercisesTab();
+      });
+    });
+    view.querySelectorAll("[data-open]").forEach(function (el) {
+      el.addEventListener("click", function () { state.exDetailName = el.getAttribute("data-open"); render(); });
+    });
+  }
+
+  function exerciseCue(name) {
+    var found = EXERCISES.find(function (e) { return e.name.toLowerCase() === name.toLowerCase(); });
+    return found && found.setup ? found : null;
+  }
+
+  function renderExerciseDetail(name) {
+    var muscle = muscleOf(name);
+    var cue = exerciseCue(name);
+    var instances = [];
+    state.workouts.forEach(function (w) {
+      w.exercises.forEach(function (ex) { if (ex.name.toLowerCase() === name.toLowerCase()) instances.push({ date: w.date, sets: ex.sets }); });
+    });
+    // oldest first for the trend line, then flip for the list below
+    instances.sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
+    var best = 0;
+    instances.forEach(function (inst) { inst.sets.forEach(function (s) { if (Number(s.weight) > best) best = Number(s.weight); }); });
+    var bestHold = 0;
+    instances.forEach(function (inst) { inst.sets.forEach(function (x) { if (Number(x.reps) > bestHold) bestHold = Number(x.reps); }); });
+    var trendVals = instances.map(function (inst) {
+      return inst.sets.reduce(function (m, s) { return Math.max(m, Number(s.weight) || 0); }, 0);
+    });
+
+    var def = exerciseDef(name);
+    var hold = isHold(name);
+    var html = '<button class="ex-detail-back" id="backBtn">\u2190 Exercises</button>';
+    html += '<h2 class="ex-detail-head" style="font-family:var(--font-display);font-size:22px;font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.04em">' + escapeHtml(name) + '</h2>';
+    html += '<div class="muscle-tag-lg">' + muscle + (def && def.target ? ' \u00b7 ' + def.target : '') + '</div>';
+    if (hold) html += '<div class="kf-hold">' + (unitOf(name) === "min" ? "Target " + defaultHold(name) + " min" : "Hold " + defaultHold(name) + "s") + '</div>';
+
+    if (cue) {
+      html += '<div class="section-title">How To</div>';
+      html += '<div class="card coach">' +
+        '<div class="coach-block"><div class="coach-label">Set Up</div><p>' + escapeHtml(cue.setup) + '</p></div>' +
+        '<div class="coach-block"><div class="coach-label">The Movement</div><p>' + escapeHtml(cue.execute) + '</p></div>' +
+        '<div class="coach-block warn"><div class="coach-label">Watch Out For</div><p>' + escapeHtml(cue.mistake) + '</p></div>' +
+        '</div>';
+    }
+
+    html += youtubeLinkHtml(name);
+
+    html += '<div class="section-title">Previous Performance</div>';
+    if (!instances.length) {
+      html += '<div class="card muted" style="text-align:center">Not logged yet</div>';
+    } else {
+      if (hold) {
+        html += '<div class="card"><div class="row-between"><span class="muted" style="font-size:12px">' + (unitOf(name) === "min" ? "Longest session" : "Longest hold") + '</span><span class="stat-num" style="font-size:18px">' + bestHold + unitOf(name) + '</span></div></div>';
+      } else {
+        html += '<div class="card"><div class="row-between" style="margin-bottom:' + (trendVals.length > 1 ? '10px' : '0') + '"><span class="muted" style="font-size:12px">All-time best</span><span class="stat-num" style="font-size:18px">' + fmtW(best) + ' kg</span></div>';
+        if (trendVals.length > 1) html += sparkline(trendVals, 280, 50, "var(--accent)");
+        html += '</div>';
+      }
+      instances.slice().reverse().slice(0, 10).forEach(function (inst) {
+        html += '<div class="prev-perf-row"><span class="muted">' + shortDate(inst.date) + '</span><span>' + escapeHtml(setsSummary(inst.sets, name)) + '</span></div>';
+      });
+    }
+    view.innerHTML = html;
+    document.getElementById("backBtn").addEventListener("click", function () { state.exDetailName = null; state.exSearchQuery = ""; render(); });
+  }
+
+  /* ============ HISTORY ============ */
+  function renderHistory() {
+    if (!state.workouts.length) {
+      view.innerHTML = '<div class="empty-state"><p>No workouts logged yet.</p></div>' +
+        '<button class="secondary" id="backfillBtn" style="width:100%">+ Log a past workout</button>';
+      bindBackfill();
+      return;
+    }
+    var html = '';
+    html += '<button class="secondary" id="backfillBtn" style="width:100%;margin-bottom:14px">+ Log a past workout</button>';
+    state.workouts.forEach(function (w) {
+      var open = state.openHistoryId === w.id;
+      var kcal = estimateCalories(w);
+      var top = topSetLabel(w);
+      html += '<div class="hist-item"><div class="hist-head" data-toggle="' + w.id + '">' +
+        '<div class="hist-main">' +
+          '<div class="hist-title"><span class="hist-name">' + escapeHtml(sessionName(w)) + '</span>' +
+            '<span class="hist-when">' + relDate(w.date) + '</span></div>' +
+          '<div class="hist-tags">' + muscleTags(w).map(function (m) { return '<span class="tag">' + m + '</span>'; }).join("") +
+            '<span class="hist-sets">' + workoutSetCount(w) + (workoutSetCount(w) === 1 ? ' set' : ' sets') + '</span></div>' +
+          (top ? '<div class="hist-top">' + escapeHtml(top) + '</div>' : '') +
+        '</div>' +
+        '<div class="hist-kcal">' + (kcal !== null ? '<span class="stat-num">~' + kcal + '</span><span class="kcal-u">kcal</span>' : '<span class="kcal-na">\u2014</span>') + '</div>' +
+        '</div><div class="hist-detail' + (open ? ' open' : '') + '">' +
+        w.exercises.map(function (ex) { return '<div class="hist-ex"><b>' + escapeHtml(ex.name) + '</b><br><span class="s">' + escapeHtml(setsSummary(ex.sets, ex.name)) + '</span></div>'; }).join("") +
+        '<div class="hist-foot"><span>' + Math.round(workoutVolume(w)).toLocaleString() + ' kg volume</span><span>' + fmtDuration(w.durationSec || 0) + '</span>' +
+          (kcal !== null ? '<span>~' + kcal + ' kcal (est.)</span>' : '<span>Log body weight for kcal</span>') + '</div>' +
+        '<div style="text-align:right;margin-top:6px"><button class="ghost danger" data-del="' + w.id + '">Delete</button></div>' +
+        '</div></div>';
+    });
+    var keepY = view.scrollTop;
+    view.innerHTML = html;
+    view.scrollTop = keepY;
+    bindBackfill();
+    view.querySelectorAll("[data-toggle]").forEach(function (el) {
+      el.addEventListener("click", function () { var id = el.getAttribute("data-toggle"); state.openHistoryId = state.openHistoryId === id ? null : id; renderHistory(); });
+    });
+    view.querySelectorAll("[data-del]").forEach(function (btn) {
+      btn.addEventListener("click", async function (e) { e.stopPropagation(); await store.deleteWorkout(btn.getAttribute("data-del")); if (!db) renderHistory(); });
+    });
+  }
+
+  function bindBackfill() {
+    var btn = document.getElementById("backfillBtn");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      if (state.activeWorkout) {
+        showConfirm("Finish the current workout first",
+          "You have a session in progress. Finish or discard it before logging a past one.", "OK", function () {});
+        return;
+      }
+      showDatePrompt("Log a past workout", function (d) {
+        state.activeWorkout = { date: d.toISOString(), startedAt: Date.now(), backdated: true, exercises: [] };
+        state.viewingWorkout = true;
+        saveDraft();
+        render();
+      });
+    });
+  }
+
+  /* ============ GOALS ============ */
+  function goalBar(pct) {
+    return '<div class="goal-track"><div class="goal-fill" style="width:' + Math.max(0, Math.min(100, pct)) + '%"></div></div>';
+  }
+
+  function renderGoals() {
+    var g = state.goals || { lifts: [] };
+    var html = "";
+
+    // --- body weight ---
+    var bw = latestBodyweight();
+    html += '<div class="section-title">Body Weight</div>';
+    if (g.bodyweight) {
+      var start = g.bodyweightStart || bw || g.bodyweight;
+      var pct = 0;
+      if (bw && start !== g.bodyweight) pct = Math.round((start - bw) / (start - g.bodyweight) * 100);
+      var togo = bw ? Math.abs(bw - g.bodyweight) : null;
+      html += '<div class="card goal-card" data-goal="bodyweight">' +
+        '<div class="row-between"><span class="goal-name">Target ' + fmtW(g.bodyweight) + ' kg</span>' +
+        '<span class="stat-num goal-val">' + (bw ? fmtW(bw) + ' kg' : '\u2014') + '</span></div>' +
+        goalBar(pct) +
+        '<div class="goal-sub">' + (togo !== null ? fmtW(Math.round(togo * 10) / 10) + ' kg to go' : 'Log your weight to track this') + '</div>' +
+        '</div>';
+    } else {
+      html += '<button class="secondary goal-add" data-set="bodyweight">+ Set a body weight goal</button>';
+    }
+
+    // --- weekly workouts ---
+    html += '<div class="section-title">Weekly Training</div>';
+    if (g.perWeek) {
+      var done = workoutsThisWeek();
+      html += '<div class="card goal-card" data-goal="perWeek">' +
+        '<div class="row-between"><span class="goal-name">' + g.perWeek + ' workouts a week</span>' +
+        '<span class="stat-num goal-val">' + done + '/' + g.perWeek + '</span></div>' +
+        goalBar(done / g.perWeek * 100) +
+        '<div class="goal-sub">' + (done >= g.perWeek ? 'Target hit this week \u2705' : (g.perWeek - done) + ' to go this week') + '</div>' +
+        '</div>';
+    } else {
+      html += '<button class="secondary goal-add" data-set="perWeek">+ Set a weekly target</button>';
+    }
+
+    // --- lift goals ---
+    html += '<div class="section-title">Strength Goals</div>';
+    (g.lifts || []).forEach(function (lg, i) {
+      var cur = currentBestFor(lg.name);
+      var pctL = lg.target ? Math.round(cur / lg.target * 100) : 0;
+      html += '<div class="card goal-card" data-lift="' + i + '">' +
+        '<div class="row-between"><span class="goal-name">' + escapeHtml(lg.name) + '</span>' +
+        '<span class="stat-num goal-val">' + fmtW(cur) + ' / ' + fmtW(lg.target) + ' kg</span></div>' +
+        goalBar(pctL) +
+        '<div class="goal-sub">' + (cur >= lg.target ? 'Achieved \ud83c\udfc6' : fmtW(Math.round((lg.target - cur) * 10) / 10) + ' kg to go') +
+        '<button class="ghost danger goal-del" data-delgoal="' + i + '">Remove</button></div>' +
+        '</div>';
+    });
+    html += '<button class="secondary goal-add" id="addLiftGoal">+ Add a strength goal</button>';
+
+    // --- progression summary ---
+    var x = xpStats();
+    html += '<div class="section-title">Progression</div>';
+    html += '<div class="stat-grid">' +
+      '<div class="stat-box"><span class="stat-num">' + x.level + '</span><div class="stat-label">Level</div></div>' +
+      '<div class="stat-box"><span class="stat-num">' + x.xp.toLocaleString() + '</span><div class="stat-label">Total XP</div></div>' +
+      '<div class="stat-box"><span class="stat-num">' + x.workouts + '</span><div class="stat-label">Workouts</div></div>' +
+      '<div class="stat-box"><span class="stat-num">' + x.prs + '</span><div class="stat-label">PRs Set</div></div>' +
+      '</div>';
+    html += '<div class="xp-note">50 XP a workout \u00b7 5 XP a set \u00b7 100 XP a PR</div>';
+
+    view.innerHTML = html;
+
+    view.querySelectorAll("[data-set]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var kind = btn.getAttribute("data-set");
+        if (kind === "bodyweight") {
+          showNumberPrompt("Target body weight", "kg", "", function (n) {
+            state.goals.bodyweight = n;
+            state.goals.bodyweightStart = latestBodyweight() || n;
+            saveGoals(); render();
+          });
+        } else {
+          showNumberPrompt("Workouts per week", "e.g. 4", "", function (n) {
+            state.goals.perWeek = Math.round(n); saveGoals(); render();
+          });
+        }
+      });
+    });
+    view.querySelectorAll("[data-goal]").forEach(function (card) {
+      card.addEventListener("click", function () {
+        var kind = card.getAttribute("data-goal");
+        showConfirm("Remove this goal?", "", "Remove", function () {
+          if (kind === "bodyweight") { state.goals.bodyweight = null; state.goals.bodyweightStart = null; }
+          else state.goals.perWeek = null;
+          saveGoals(); render();
+        });
+      });
+    });
+    view.querySelectorAll("[data-delgoal]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        state.goals.lifts.splice(Number(btn.getAttribute("data-delgoal")), 1);
+        saveGoals(); render();
+      });
+    });
+    var addBtn = document.getElementById("addLiftGoal");
+    if (addBtn) addBtn.addEventListener("click", function () {
+      var names = allExerciseNames().filter(function (n) { return !isHold(n); });
+      showPickPrompt("Pick an exercise", names, function (name) {
+        showNumberPrompt("Target for " + name, "kg", currentBestFor(name) || "", function (n) {
+          state.goals.lifts = state.goals.lifts || [];
+          state.goals.lifts.push({ name: name, target: n });
+          saveGoals(); render();
+        });
+      });
+    });
+  }
+
+  /* ============ PROGRESS ============ */
+  function renderProgress() {
+    var html = '';
+
+    html += '<div class="card"><div class="row-between" style="margin-bottom:8px"><span style="font-weight:600;font-size:13px">Body Weight</span>' +
+      '<span class="stat-num" style="font-size:16px">' + (state.bodyweights[0] ? fmtW(state.bodyweights[0].weight) + ' kg' : '--') + '</span></div>';
+    var bwVals = state.bodyweights.slice(0, 20).reverse().map(function (b) { return Number(b.weight); });
+    html += bwVals.length > 1 ? sparkline(bwVals, 280, 60, "var(--accent)") : '<div class="muted" style="font-size:12px">Log body weight to see a trend</div>';
+    html += '</div>';
+
+    var volSeries = state.workouts.slice(0, 20).reverse().map(function (w) { return workoutVolume(w); });
+    html += '<div class="card"><div style="font-weight:600;font-size:13px;margin-bottom:8px">Volume Per Workout</div>';
+    html += volSeries.length > 1 ? sparkline(volSeries, 280, 60, "var(--accent)") : '<div class="muted" style="font-size:12px">Finish a few workouts to see a trend</div>';
+    html += '</div>';
+
+    var totalVolume = state.workouts.reduce(function (s, w) { return s + workoutVolume(w); }, 0);
+    var last8WeeksCounts = [];
+    for (var i = 7; i >= 0; i--) {
+      var ws = new Date(); ws.setDate(ws.getDate() - i * 7);
+      var start = startOfWeek(ws), end = new Date(start); end.setDate(end.getDate() + 7);
+      var c = state.workouts.filter(function (w) { var d = new Date(w.date); return d >= start && d < end; }).length;
+      last8WeeksCounts.push(c);
+    }
+    html += '<div class="stat-grid">' +
+      '<div class="stat-box"><span class="stat-num">' + Math.round(totalVolume).toLocaleString() + '</span><div class="stat-label">Total Volume (kg)</div></div>' +
+      '<div class="stat-box"><span class="stat-num">' + state.workouts.length + '</span><div class="stat-label">Total Workouts</div></div>' +
+      '</div>';
+
+    html += '<div class="card" style="margin-top:14px"><div style="font-weight:600;font-size:13px;margin-bottom:8px">Workouts / Week</div>' +
+      '<div class="week-spark" style="height:44px">' + last8WeeksCounts.map(function (c) {
+        var h = Math.max(4, Math.round((c / Math.max.apply(null, last8WeeksCounts.concat([1]))) * 44));
+        return '<div class="bar' + (c > 0 ? ' filled' : '') + '" style="height:' + h + 'px"></div>';
+      }).join("") + '</div></div>';
+
+    html += '<div class="section-title">Personal Records</div>';
+    var prMap = {};
+    state.workouts.forEach(function (w) {
+      w.exercises.forEach(function (ex) {
+        if (isHold(ex.name)) return;
+        (ex.sets || []).forEach(function (s) {
+          var wt = Number(s.weight) || 0;
+          if (!prMap[ex.name] || wt > prMap[ex.name]) prMap[ex.name] = wt;
+        });
+      });
+    });
+    Object.keys(prMap).forEach(function (k) { if (!prMap[k]) delete prMap[k]; });
+    var prNames = Object.keys(prMap).sort(function (a, b) { return prMap[b] - prMap[a]; }).slice(0, 8);
+    if (!prNames.length) html += '<div class="card muted" style="text-align:center">No PRs yet \u2014 finish a workout to set some</div>';
+    else {
+      html += '<div class="card">' + prNames.map(function (n) {
+        return '<div class="pr-row"><span>\ud83c\udfc6 ' + escapeHtml(n) + '</span><span class="pw">' + fmtW(prMap[n]) + ' kg</span></div>';
+      }).join("") + '</div>';
+    }
+
+    html += '<div class="section-title">Muscle Group Breakdown</div>';
+    var cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+    var muscleCounts = {};
+    MUSCLES.forEach(function (m) { muscleCounts[m] = 0; });
+    state.workouts.forEach(function (w) {
+      if ((w.createdAt || 0) < cutoff) return;
+      w.exercises.forEach(function (ex) {
+        var m = muscleOf(ex.name);
+        muscleCounts[m] = (muscleCounts[m] || 0) + (ex.sets ? ex.sets.length : 0);
+      });
+    });
+    var maxM = Math.max.apply(null, Object.keys(muscleCounts).map(function (k) { return muscleCounts[k]; }).concat([1]));
+    html += '<div class="card">';
+    var anySets = Object.keys(muscleCounts).some(function (k) { return muscleCounts[k] > 0; });
+    if (!anySets) {
+      html += '<div class="muted" style="text-align:center;font-size:12px">No sets logged in the last 30 days</div>';
+    } else {
+      MUSCLES.forEach(function (m) {
+        var c = muscleCounts[m] || 0;
+        html += '<div class="muscle-bar-row"><div class="mlabel"><span>' + m + '</span><span class="muted">' + c + ' sets</span></div>' +
+          '<div class="muscle-bar-track"><div class="muscle-bar-fill" style="width:' + Math.round((c / maxM) * 100) + '%"></div></div></div>';
+      });
+    }
+    html += '</div>';
+
+    view.innerHTML = html;
+  }
+
+  /* ============ tab bar ============ */
+  document.querySelectorAll(".tab").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".tab").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      state.viewingWorkout = false;
+      state.tab = btn.getAttribute("data-tab");
+      state.exDetailName = null;
+      state.exSearchQuery = "";
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
