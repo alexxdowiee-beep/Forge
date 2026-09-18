@@ -1560,7 +1560,7 @@
   // days since each muscle group last saw a working set
   function recoveryByMuscle() {
     var out = {};
-    MUSCLES.forEach(function (m) { if (m !== "Mobility") out[m] = null; });
+    MUSCLES.forEach(function (m) { if (m !== "Mobility" && m !== "Cardio") out[m] = null; });
     var today = new Date(); today.setHours(0, 0, 0, 0);
     state.workouts.forEach(function (w) {
       var d = new Date(w.date); d.setHours(0, 0, 0, 0);
