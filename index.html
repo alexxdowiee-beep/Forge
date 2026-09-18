@@ -109,7 +109,7 @@
     display: flex; justify-content: space-between; align-items: center;
   }
   .goal-add { width: 100%; margin-bottom: 4px; }
-  .xp-note { font-size: 11px; color: var(--faint); text-align: center; margin-top: 12px; }
+  .xp-note { font-size: 11px; color: var(--muted); text-align: center; margin-top: 12px; }
   .pick-list { max-height: 230px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin: 12px 0; }
   .pick-item { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
   .pick-item:last-child { border-bottom: none; }
@@ -210,14 +210,15 @@
   .tab {
     flex: 1; padding: 12px 0 10px;
     background: none; border: none;
-    color: var(--faint);
+    color: var(--muted);
     font-family: var(--font-body);
     font-weight: 700; font-size: 10px;
     letter-spacing: 0.01em;
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     cursor: pointer;
   }
-  .tab .ic { font-size: 18px; }
+  .tab .ic { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+  .tab .ic svg { width: 100%; height: 100%; }
   .tab.active { color: var(--accent); }
 
   /* ---------- generic ---------- */
@@ -315,7 +316,7 @@
   .week-spark { display: flex; align-items: flex-end; gap: 4px; height: 40px; margin-top: 10px; }
   .week-spark .bar { flex: 1; background: var(--surface2); border-radius: 3px; position: relative; }
   .week-spark .bar.filled { background: var(--accent); }
-  .week-spark .lbl { font-size: 9px; color: var(--faint); text-align: center; margin-top: 3px; }
+  .week-spark .lbl { font-size: 9px; color: var(--muted); text-align: center; margin-top: 3px; }
 
   /* ---------- workout screen ---------- */
   .workout-topbar {
@@ -343,7 +344,7 @@
     padding: 6px 0;
   }
   .set-line.hold { grid-template-columns: 16px 1fr 38px; }
-  .set-line .sidx { color: var(--faint); font-size: 12px; font-weight: 700; }
+  .set-line .sidx { color: var(--muted); font-size: 12px; font-weight: 700; }
   .set-line.done { opacity: 0.55; }
   .set-line.active .sidx { color: var(--accent); }
   .check-btn {
@@ -411,7 +412,7 @@
     background: var(--surface2); color: var(--muted);
     font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
   }
-  .hist-sets { font-size: 11px; color: var(--faint); font-weight: 600; }
+  .hist-sets { font-size: 11px; color: var(--muted); font-weight: 600; }
   .hist-top {
     font-size: 12.5px; color: var(--ink); margin-top: 6px;
     font-variant-numeric: tabular-nums;
@@ -420,7 +421,7 @@
   .hist-kcal { text-align: right; flex-shrink: 0; }
   .hist-kcal .stat-num { font-size: 20px; display: block; line-height: 1.1; }
   .hist-kcal .kcal-u { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .hist-kcal .kcal-na { font-size: 20px; color: var(--faint); }
+  .hist-kcal .kcal-na { font-size: 20px; color: var(--muted); }
   .hist-foot {
     display: flex; flex-wrap: wrap; gap: 4px 14px;
     font-size: 11.5px; color: var(--muted);
@@ -428,7 +429,7 @@
     font-variant-numeric: tabular-nums;
   }
   .finish-kcal { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
-  .finish-kcal span { font-size: 11px; color: var(--faint); }
+  .finish-kcal span { font-size: 11px; color: var(--muted); }
 
   .hist-detail { display: none; margin-top: 10px; }
   .hist-detail.open { display: block; }
@@ -521,18 +522,34 @@
   }
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
   .pulsing { animation: pulse 1.4s ease-in-out infinite; }
+
+  /* ---------- first-paint skeleton (replaced the instant render() runs) ---------- */
+  .skeleton { display: flex; flex-direction: column; gap: 12px; }
+  .skeleton .sk-row { display: flex; gap: 8px; }
+  .skeleton .sk-chip { height: 30px; width: 64px; border-radius: 20px; background: var(--surface2); flex-shrink: 0; }
+  .skeleton .sk-card { height: 90px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); }
+  .skeleton .sk-chip, .skeleton .sk-card { animation: skPulse 1.3s ease-in-out infinite; }
+  @keyframes skPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.9; } }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton .sk-chip, .skeleton .sk-card { animation: none; }
+  }
 </style>
 </head>
 <body>
 <div id="app">
   <header id="topbar"></header>
-  <main id="view"></main>
+  <main id="view"><div class="skeleton" aria-hidden="true">
+    <div class="sk-row"><div class="sk-chip"></div><div class="sk-chip"></div><div class="sk-chip"></div><div class="sk-chip"></div></div>
+    <div class="sk-card"></div>
+    <div class="sk-card" style="height:60px"></div>
+    <div class="sk-card" style="height:60px"></div>
+  </div></main>
   <nav class="tabbar">
-    <button class="tab active" data-tab="home"><span class="ic">&#8962;</span>Home</button>
-    <button class="tab" data-tab="exercises"><span class="ic">&#9998;</span>Exercises</button>
-    <button class="tab" data-tab="history"><span class="ic">&#8801;</span>History</button>
-    <button class="tab" data-tab="progress"><span class="ic">&#9650;</span>Progress</button>
-    <button class="tab" data-tab="goals"><span class="ic">&#9678;</span>Goals</button>
+    <button class="tab active" data-tab="home"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9"/><path d="M10 20v-6h4v6"/></svg></span>Home</button>
+    <button class="tab" data-tab="exercises"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="3" height="6" rx="1"/><rect x="19" y="9" width="3" height="6" rx="1"/><line x1="6.5" y1="12" x2="17.5" y2="12"/><rect x="5" y="7" width="2" height="10" rx="1"/><rect x="17" y="7" width="2" height="10" rx="1"/></svg></span>Exercises</button>
+    <button class="tab" data-tab="history"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg></span>History</button>
+    <button class="tab" data-tab="progress"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-5 4 4 6-7"/><path d="M14 8h5v5"/></svg></span>Progress</button>
+    <button class="tab" data-tab="goals"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg></span>Goals</button>
   </nav>
 </div>
 
@@ -894,6 +911,15 @@
       else localSaveCE();
     }
   };
+
+  /* ---- first-run intro card, dismissed once and remembered ---- */
+  var LS_ONBOARD = "repledger_onboard_dismissed_v1";
+  function introDismissed() {
+    try { return localStorage.getItem(LS_ONBOARD) === "1"; } catch (e) { return false; }
+  }
+  function dismissIntro() {
+    try { localStorage.setItem(LS_ONBOARD, "1"); } catch (e) {}
+  }
 
   /* ---- in-progress workout is saved continuously, not just on Finish ---- */
   var LS_DRAFT = "repledger_active_v1";
@@ -1423,6 +1449,17 @@
     var html = "";
     if (state.dbAvailable === false) html += '<div class="offline-note">Saved on this device only \u2014 storage isn\u2019t connected.</div>';
 
+    var showIntro = !state.workouts.length && !introDismissed();
+    if (showIntro) {
+      html += '<div class="card" id="introCard">' +
+        '<div style="font-weight:700;margin-bottom:6px">Welcome to Forge</div>' +
+        '<p class="muted" style="font-size:13px;line-height:1.5;margin:0 0 12px">' +
+        'Pick a routine below and hit Start to log your first workout. Finish workouts to earn XP, level up, and build a streak \u2014 set targets anytime from the Goals tab.' +
+        '</p>' +
+        '<button class="secondary" id="dismissIntroBtn">Got it</button>' +
+        '</div>';
+    }
+
     html += '<div class="routine-grid">';
     ROUTINE_ORDER.forEach(function (r) {
       var list = ROUTINES[r] || [];
@@ -1454,7 +1491,7 @@
         '<div class="hist-kcal">' + (lastKcal !== null ? '<span class="stat-num">~' + lastKcal + '</span><span class="kcal-u">kcal</span>' : '<span class="kcal-na">\u2014</span>') + '</div>' +
         '</div></div>';
     } else {
-      html += '<div class="card muted" style="text-align:center;padding:20px">No workouts yet</div>';
+      html += '<div class="card muted" style="text-align:center;padding:20px">No workouts yet — pick a routine above and tap Start</div>';
     }
 
     var bw = state.bodyweights[0];
@@ -1495,6 +1532,10 @@
 
     view.innerHTML = html;
 
+    if (showIntro) {
+      var dismissIntroBtn = document.getElementById("dismissIntroBtn");
+      if (dismissIntroBtn) dismissIntroBtn.addEventListener("click", function () { dismissIntro(); render(); });
+    }
     document.getElementById("startBtn").addEventListener("click", function () {
       if (state.activeWorkout) { state.viewingWorkout = true; render(); return; }
       var exList = (ROUTINES[state.selectedRoutine] || []).map(function (name) { return { name: name, muscle: muscleOf(name), sets: [] }; });
