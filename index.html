@@ -301,6 +301,43 @@
   .same-again b { font-family: var(--font-display); font-size: 14px; }
   .same-again:active { background: var(--accent); color: var(--accent-ink); }
 
+  /* ---- week strip ---- */
+  .week-strip { display: flex; gap: 6px; }
+  .week-strip .day { flex: 1; text-align: center; }
+  .day-mark {
+    height: 34px; border-radius: 9px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 14px; color: var(--faint);
+  }
+  .day.done .day-mark {
+    background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+  }
+  .day.today .day-mark { border-color: var(--accent); color: var(--accent); border-style: dashed; }
+  .day-lbl { font-size: 10px; color: var(--muted); font-weight: 700; margin-top: 4px; }
+
+  /* ---- recovery ---- */
+  .rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .rec-cell {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 4px; text-align: center;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .rec-m {
+    font-size: 9.5px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .rec-d { font-family: var(--font-display); font-size: 15px; }
+  .rec-cell.fresh .rec-d { color: var(--muted); }
+  .rec-cell.ready .rec-d { color: var(--ink); }
+  .rec-cell.stale { border-color: var(--accent); }
+  .rec-cell.stale .rec-d { color: var(--accent); }
+  .rec-cell.never .rec-d { color: var(--faint); }
+  .rec-note {
+    font-size: 10px; color: var(--faint); text-align: center;
+    margin-top: 9px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+  }
+
   .tabbar {
     position: fixed;
     bottom: 0; left: 50%;
@@ -1520,6 +1557,40 @@
       right + '</div>' + momentum;
   }
 
+  // days since each muscle group last saw a working set
+  function recoveryByMuscle() {
+    var out = {};
+    MUSCLES.forEach(function (m) { if (m !== "Mobility") out[m] = null; });
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    state.workouts.forEach(function (w) {
+      var d = new Date(w.date); d.setHours(0, 0, 0, 0);
+      var days = Math.round((today - d) / 86400000);
+      (w.exercises || []).forEach(function (ex) {
+        if (!(ex.sets || []).length) return;
+        var m = muscleOf(ex.name);
+        if (!(m in out)) return;
+        if (out[m] === null || days < out[m]) out[m] = days;
+      });
+    });
+    return out;
+  }
+
+  // what each day of this week actually was, for the week strip
+  function weekDayTypes() {
+    var start = startOfWeek(new Date());
+    var days = [null, null, null, null, null, null, null];
+    state.workouts.forEach(function (w) {
+      var d = new Date(w.date);
+      if (d < start) return;
+      var idx = (d.getDay() + 6) % 7;
+      var name = sessionName(w);
+      var letter = name === "Mobility" ? "S" : name === "Cardio" ? "C" : name.charAt(0);
+      if (!days[idx]) days[idx] = { letter: letter, name: name, count: 1 };
+      else days[idx].count++;
+    });
+    return days;
+  }
+
   /* ============ HOME ============ */
   function renderHome() {
     var g = state.goals || {};
@@ -1611,28 +1682,43 @@
     var thisWeekStart = startOfWeek(now);
     var lastWeekStart = new Date(thisWeekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
     var thisWeekCount = 0, lastWeekCount = 0;
-    var dayVol = [0,0,0,0,0,0,0];
     state.workouts.forEach(function (w) {
       var d = new Date(w.date);
-      if (d >= thisWeekStart) {
-        thisWeekCount++;
-        dayVol[(d.getDay() + 6) % 7] += workoutVolume(w);
-      } else if (d >= lastWeekStart && d < thisWeekStart) lastWeekCount++;
+      if (d >= thisWeekStart) thisWeekCount++;
+      else if (d >= lastWeekStart && d < thisWeekStart) lastWeekCount++;
     });
-    var maxDay = Math.max.apply(null, dayVol.concat([1]));
+    var types = weekDayTypes();
+    var todayIdx = (now.getDay() + 6) % 7;
     var dayLbls = ["M","T","W","T","F","S","S"];
     html += '<div class="section-title">This Week</div>';
     html += '<div class="card">' +
-      '<div class="row-between" style="margin-bottom:2px">' +
+      '<div class="row-between" style="margin-bottom:10px">' +
         '<span class="muted" style="font-size:12px;font-weight:700">' +
-          (g.perWeek ? thisWeekCount + ' of ' + g.perWeek + ' target' : 'Volume by day') + '</span>' +
+          (g.perWeek ? thisWeekCount + ' of ' + g.perWeek + ' target' : thisWeekCount + (thisWeekCount === 1 ? ' session' : ' sessions')) + '</span>' +
         '<span class="pill">' + (thisWeekCount >= lastWeekCount ? "\u2191" : "\u2193") + ' vs ' + lastWeekCount + ' last week</span></div>' +
-      '<div class="week-spark">' + dayVol.map(function (v) {
-        var h = Math.max(4, Math.round((v / maxDay) * 40));
-        return '<div class="bar' + (v > 0 ? ' filled' : '') + '" style="height:' + h + 'px"></div>';
+      '<div class="week-strip">' + types.map(function (t, i) {
+        var cls = t ? "day done" : (i === todayIdx ? "day today" : "day");
+        return '<div class="' + cls + '">' +
+          '<div class="day-mark">' + (t ? t.letter : (i === todayIdx ? "\u00b7" : "")) + '</div>' +
+          '<div class="day-lbl">' + dayLbls[i] + '</div></div>';
       }).join("") + '</div>' +
-      '<div class="week-spark">' + dayLbls.map(function (l) { return '<div class="lbl" style="flex:1">' + l + '</div>'; }).join("") + '</div>' +
       '</div>';
+
+    // ---------- 1. muscle recovery ----------
+    var rec = recoveryByMuscle();
+    var recKeys = Object.keys(rec);
+    if (state.workouts.length) {
+      html += '<div class="section-title">Recovery</div>';
+      html += '<div class="card"><div class="rec-grid">' +
+        recKeys.map(function (m) {
+          var v = rec[m];
+          var state_cls = v === null ? "never" : (v <= 1 ? "fresh" : (v >= 5 ? "stale" : "ready"));
+          var txt = v === null ? "\u2014" : (v === 0 ? "today" : v + "d");
+          return '<div class="rec-cell ' + state_cls + '"><span class="rec-m">' + m + '</span>' +
+                 '<span class="rec-d">' + txt + '</span></div>';
+        }).join("") +
+        '</div><div class="rec-note">Days since last trained</div></div>';
+    }
 
     view.innerHTML = html;
 
