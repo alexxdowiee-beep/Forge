@@ -378,6 +378,19 @@
   .ex-chev { font-size: 12px; color: var(--faint); }
   .ex-row.untrained .en { color: var(--muted); }
 
+  .pr-row { align-items: flex-start; }
+  .pr-left { text-align: left; }
+  .pr-right { text-align: right; display: flex; flex-direction: column; gap: 1px; }
+  .pr-when { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+  .pr-old {
+    font-size: 9px; color: var(--faint); font-weight: 700; margin-left: 6px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .stat-box .delta { font-size: 10.5px; font-weight: 700; margin-top: 3px; }
+  .stat-box .delta.up { color: var(--accent); }
+  .stat-box .delta.down { color: var(--muted); }
+  .stat-box .delta.flat { color: var(--faint); }
+
   .tabbar {
     position: fixed;
     bottom: 0; left: 50%;
@@ -2587,12 +2600,36 @@
     html += bwVals.length > 1 ? sparkline(bwVals, 280, 60, "var(--accent)") : '<div class="muted" style="font-size:12px">Log body weight to see a trend</div>';
     html += '</div>';
 
-    var volSeries = state.workouts.slice(0, 20).reverse().map(function (w) { return workoutVolume(w); });
-    html += '<div class="card"><div style="font-weight:600;font-size:13px;margin-bottom:8px">Volume Per Workout</div>';
-    html += volSeries.length > 1 ? sparkline(volSeries, 280, 60, "var(--accent)") : '<div class="muted" style="font-size:12px">Finish a few workouts to see a trend</div>';
+    // weekly totals: session type no longer distorts the line
+    var weekVols = [], weekLabels = [];
+    for (var wi = 11; wi >= 0; wi--) {
+      var ref = new Date(); ref.setDate(ref.getDate() - wi * 7);
+      var ws0 = startOfWeek(ref), we0 = new Date(ws0); we0.setDate(we0.getDate() + 7);
+      var vol = state.workouts.reduce(function (t, w) {
+        var d = new Date(w.date);
+        return (d >= ws0 && d < we0) ? t + workoutVolume(w) : t;
+      }, 0);
+      weekVols.push(vol);
+      weekLabels.push(ws0);
+    }
+    var nonZero = weekVols.filter(function (v) { return v > 0; }).length;
+    html += '<div class="card"><div class="row-between" style="margin-bottom:8px">' +
+      '<span style="font-weight:600;font-size:13px">Volume Per Week</span>' +
+      '<span class="stat-num" style="font-size:16px">' + Math.round(weekVols[weekVols.length - 1]).toLocaleString() + '<span class="muted" style="font-size:11px"> kg</span></span></div>';
+    html += nonZero > 1 ? sparkline(weekVols, 280, 60, "var(--accent)")
+      : '<div class="muted" style="font-size:12px">A few weeks of training will fill this in</div>';
     html += '</div>';
 
-    var totalVolume = state.workouts.reduce(function (s, w) { return s + workoutVolume(w); }, 0);
+    var nowD = new Date();
+    var mStart = new Date(nowD.getFullYear(), nowD.getMonth(), 1);
+    var pStart = new Date(nowD.getFullYear(), nowD.getMonth() - 1, 1);
+    var thisMonthVol = 0, lastMonthVol = 0;
+    state.workouts.forEach(function (w) {
+      var d = new Date(w.date), v = workoutVolume(w);
+      if (d >= mStart) thisMonthVol += v;
+      else if (d >= pStart && d < mStart) lastMonthVol += v;
+    });
+    var volDelta = lastMonthVol ? Math.round((thisMonthVol - lastMonthVol) / lastMonthVol * 100) : null;
     var last8WeeksCounts = [];
     for (var i = 7; i >= 0; i--) {
       var ws = new Date(); ws.setDate(ws.getDate() - i * 7);
@@ -2601,7 +2638,11 @@
       last8WeeksCounts.push(c);
     }
     html += '<div class="stat-grid">' +
-      '<div class="stat-box"><span class="stat-num">' + Math.round(totalVolume).toLocaleString() + '</span><div class="stat-label">Total Volume (kg)</div></div>' +
+      '<div class="stat-box"><span class="stat-num">' + Math.round(thisMonthVol).toLocaleString() + '</span>' +
+        '<div class="stat-label">Volume This Month</div>' +
+        (volDelta !== null ? '<div class="delta ' + (volDelta >= 0 ? 'up' : 'down') + '">' +
+          (volDelta >= 0 ? '\u2191' : '\u2193') + Math.abs(volDelta) + '% vs last</div>'
+          : '<div class="delta flat">first month</div>') + '</div>' +
       '<div class="stat-box"><span class="stat-num">' + state.workouts.length + '</span><div class="stat-label">Total Workouts</div></div>' +
       '</div>';
 
@@ -2612,22 +2653,30 @@
       }).join("") + '</div></div>';
 
     html += '<div class="section-title">Personal Records</div>';
-    var prMap = {};
-    state.workouts.forEach(function (w) {
-      w.exercises.forEach(function (ex) {
+    // walk forward in time so each PR keeps the date it was actually set
+    var chrono = state.workouts.slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    var bestSoFar = {}, prEvents = [];
+    chrono.forEach(function (w) {
+      (w.exercises || []).forEach(function (ex) {
         if (isHold(ex.name)) return;
-        (ex.sets || []).forEach(function (s) {
-          var wt = Number(s.weight) || 0;
-          if (!prMap[ex.name] || wt > prMap[ex.name]) prMap[ex.name] = wt;
-        });
+        var top = (ex.sets || []).reduce(function (m, st) { return Math.max(m, Number(st.weight) || 0); }, 0);
+        if (top <= 0) return;
+        if (bestSoFar[ex.name] === undefined || top > bestSoFar[ex.name]) {
+          bestSoFar[ex.name] = top;
+          prEvents.push({ name: ex.name, weight: top, date: w.date });
+        }
       });
     });
-    Object.keys(prMap).forEach(function (k) { if (!prMap[k]) delete prMap[k]; });
-    var prNames = Object.keys(prMap).sort(function (a, b) { return prMap[b] - prMap[a]; }).slice(0, 8);
-    if (!prNames.length) html += '<div class="card muted" style="text-align:center">No PRs yet \u2014 finish a workout to set some</div>';
+    prEvents.reverse();   // newest achievement first
+    if (!prEvents.length) html += '<div class="card muted" style="text-align:center">No PRs yet \u2014 finish a workout to set some</div>';
     else {
-      html += '<div class="card">' + prNames.map(function (n) {
-        return '<div class="pr-row"><span>\ud83c\udfc6 ' + escapeHtml(n) + '</span><span class="pw">' + fmtW(prMap[n]) + ' kg</span></div>';
+      html += '<div class="card">' + prEvents.slice(0, 8).map(function (p) {
+        var current = bestSoFar[p.name] === p.weight;
+        return '<div class="pr-row">' +
+          '<span class="pr-left">\ud83c\udfc6 ' + escapeHtml(p.name) +
+            (current ? '' : '<span class="pr-old">beaten</span>') + '</span>' +
+          '<span class="pr-right"><span class="pw">' + fmtW(p.weight) + ' kg</span>' +
+          '<span class="pr-when">' + relDate(p.date) + '</span></span></div>';
       }).join("") + '</div>';
     }
 
