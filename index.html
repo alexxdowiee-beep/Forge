@@ -417,6 +417,37 @@
   .orm-spark { margin-top: 2px; opacity: 0.85; }
   .orm-note { font-size: 10px; color: var(--faint); text-align: center; margin-top: 10px; line-height: 1.4; }
 
+  .hist-btns { display: flex; justify-content: flex-end; gap: 14px; margin-top: 6px; }
+
+  .rt-wrap { position: relative; }
+  .rt-wrap .routine-tile { width: 100%; }
+  .rt-edit {
+    position: absolute; top: 5px; right: 5px;
+    background: none; border: none; color: var(--muted);
+    font-size: 12px; padding: 4px 6px; line-height: 1;
+  }
+  .routine-tile.active + .rt-edit { color: var(--accent-ink); opacity: 0.7; }
+  .new-routine { border-style: dashed; }
+  .rt-title-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 14px; }
+  .rt-title {
+    font-family: var(--font-display); font-size: 21px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .rt-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 11px; padding: 11px 12px; margin-bottom: 7px;
+  }
+  .rt-ex { flex: 1; font-size: 14px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rt-actions { display: flex; gap: 5px; flex-shrink: 0; }
+  .rt-mv, .rt-rm {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; line-height: 1;
+  }
+  .rt-mv:disabled { opacity: 0.25; }
+  .rt-rm { color: var(--danger); }
+
   .tabbar {
     position: fixed;
     bottom: 0; left: 50%;
@@ -1054,7 +1085,13 @@
     "Warm Up": MOBILITY.filter(function (m) { return m.phase === "warmup"; }).map(function (m) { return m.name; }),
     "Stretch": MOBILITY.filter(function (m) { return m.phase === "cooldown"; }).map(function (m) { return m.name; })
   };
-  var ROUTINE_ORDER = ["Quick", "Warm Up", "Push", "Pull", "Legs", "Full Body", "Cardio", "Stretch"];
+  var DEFAULT_ROUTINE_ORDER = ["Quick", "Warm Up", "Push", "Pull", "Legs", "Full Body", "Cardio", "Stretch"];
+  function routineOrder() {
+    var keys = Object.keys(state.routines || {});
+    var ordered = DEFAULT_ROUTINE_ORDER.filter(function (k) { return keys.indexOf(k) !== -1; });
+    keys.forEach(function (k) { if (ordered.indexOf(k) === -1) ordered.push(k); });
+    return ordered;
+  }
   var REST_SECONDS = 90;
 
   // resolved up front: boot can render synchronously when no cloud storage exists
@@ -1066,6 +1103,10 @@
     activeWorkout: null,
     selectedRoutine: "Quick",
     routinePickerOpen: false,
+    routines: null,
+    routineEdit: null,
+    editWorkoutId: null,
+    editDraft: null,
     goals: { bodyweight: null, perWeek: null, lifts: [] },
     workouts: [],
     bodyweights: [],
@@ -1096,6 +1137,7 @@
     try { state.bodyweights = JSON.parse(localStorage.getItem(LS_BW) || "[]"); } catch (e) { state.bodyweights = []; }
     try { state.customExercises = JSON.parse(localStorage.getItem(LS_CE) || "{}"); } catch (e) { state.customExercises = {}; }
     loadGoalsLocal();
+    loadRoutinesLocal();
   }
   function localSaveW() { localStorage.setItem(LS_W, JSON.stringify(state.workouts)); }
   function localSaveBW() { localStorage.setItem(LS_BW, JSON.stringify(state.bodyweights)); }
@@ -1108,6 +1150,19 @@
       w.createdAt = Date.now();
       if (db) { var ref = await db.collection("workouts").add(w); w.id = ref.id; }
       else { w.id = uid(); state.workouts.unshift(w); localSaveW(); }
+    },
+    async updateWorkout(id, exercises) {
+      var idx = -1;
+      for (var i = 0; i < state.workouts.length; i++) if (state.workouts[i].id === id) { idx = i; break; }
+      if (idx === -1) return;
+      state.workouts[idx].exercises = exercises;
+      if (db) {
+        try { await db.doc("workouts/" + id).update({ exercises: exercises }); } catch (e) {}
+      } else localSaveW();
+    },
+    async saveRoutines() {
+      try { localStorage.setItem("forge_routines_v1", JSON.stringify(state.routines)); } catch (e) {}
+      if (db) { try { await db.doc("meta/routines").set({ map: state.routines }); } catch (e) {} }
     },
     async deleteWorkout(id) {
       if (db) await db.doc("workouts/" + id).delete();
@@ -1162,6 +1217,14 @@
     render();
   }
 
+  function loadRoutinesLocal() {
+    if (!state.routines) state.routines = JSON.parse(JSON.stringify(ROUTINES));
+    try {
+      var r = JSON.parse(localStorage.getItem("forge_routines_v1") || "null");
+      if (r && typeof r === "object") state.routines = r;
+    } catch (e) {}
+  }
+
   function sortWorkouts() { state.workouts.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); }
   function sortBW() { state.bodyweights.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); }
 
@@ -1174,6 +1237,11 @@
       if (ceSnap.exists) { var d = ceSnap.data(); state.customExercises = d.map || {}; }
     } catch (e) {}
     loadGoalsLocal();
+    loadRoutinesLocal();
+    try {
+      var rSnap = await db.doc("meta/routines").get();
+      if (rSnap.exists) { var rd = rSnap.data(); if (rd.map) state.routines = rd.map; }
+    } catch (e) {}
     try {
       var gSnap = await db.doc("goals/main").get();
       if (gSnap.exists) {
@@ -1362,7 +1430,7 @@
     if (state.finishSummary) { renderFinishOverlay(); return; }
     if (state.activeWorkout && state.viewingWorkout) { renderWorkoutScreen(); return; }
     stopElapsedTimer();
-    if (state.tab === "home") renderHome();
+    if (state.tab === "home") { if (state.routineEdit) renderRoutineEditor(); else renderHome(); }
     else if (state.tab === "exercises") renderExercisesTab();
     else if (state.tab === "history") renderHistory();
     else if (state.tab === "goals") renderGoals();
@@ -1673,7 +1741,7 @@
     if (state.dbAvailable === false) html += '<div class="offline-note">Saved on this device only \u2014 storage isn\u2019t connected.</div>';
 
     // --- 1. routine collapsed to one row; Start sits high on the screen ---
-    var preview = ROUTINES[state.selectedRoutine] || [];
+    var preview = state.routines[state.selectedRoutine] || [];
     var label = state.selectedRoutine === "Quick" ? "Quick Workout" : state.selectedRoutine + " Day";
     html += '<div class="card today-card">' +
       '<button class="routine-switch" id="routineSwitch">' +
@@ -1709,12 +1777,17 @@
     // routine picker, hidden until asked for
     if (state.routinePickerOpen) {
       html += '<div class="routine-grid">';
-      ROUTINE_ORDER.forEach(function (r) {
-        var list = ROUTINES[r] || [];
+      routineOrder().forEach(function (r) {
+        var list = state.routines[r] || [];
         var sub = list.length ? list.length + " exercises" : (r === "Quick" ? "Build as you go" : "Add your own");
-        html += '<button class="routine-tile' + (state.selectedRoutine === r ? ' active' : '') + '" data-routine="' + r + '">' +
-          '<span class="rt-name">' + r + '</span><span class="rt-sub">' + sub + '</span></button>';
+        html += '<div class="rt-wrap">' +
+          '<button class="routine-tile' + (state.selectedRoutine === r ? ' active' : '') + '" data-routine="' + r + '">' +
+          '<span class="rt-name">' + r + '</span><span class="rt-sub">' + sub + '</span></button>' +
+          '<button class="rt-edit" data-editroutine="' + escapeHtml(r) + '" aria-label="Edit ' + r + '">\u270e</button>' +
+          '</div>';
       });
+      html += '<button class="routine-tile new-routine" id="newRoutine">' +
+        '<span class="rt-name">+ New</span><span class="rt-sub">Build your own</span></button>';
       html += '</div>';
     }
 
@@ -1799,7 +1872,7 @@
 
     document.getElementById("startBtn").addEventListener("click", function () {
       if (state.activeWorkout) { state.viewingWorkout = true; render(); return; }
-      var exList = (ROUTINES[state.selectedRoutine] || []).map(function (name) { return { name: name, muscle: muscleOf(name), sets: [], plannedSets: isHold(name) ? 1 : 3 }; });
+      var exList = (state.routines[state.selectedRoutine] || []).map(function (name) { return { name: name, muscle: muscleOf(name), sets: [], plannedSets: isHold(name) ? 1 : 3 }; });
       state.activeWorkout = { date: new Date().toISOString(), startedAt: Date.now(), exercises: exList };
       state.viewingWorkout = true;
       saveDraft();
@@ -1815,6 +1888,23 @@
     if (switchBtn) switchBtn.addEventListener("click", function () {
       state.routinePickerOpen = !state.routinePickerOpen;
       render();
+    });
+    view.querySelectorAll("[data-editroutine]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        state.routineEdit = btn.getAttribute("data-editroutine");
+        render();
+      });
+    });
+    var newR = document.getElementById("newRoutine");
+    if (newR) newR.addEventListener("click", function () {
+      showTextPrompt("New routine", "Name it", "", function (name) {
+        if (state.routines[name]) return;
+        state.routines[name] = [];
+        store.saveRoutines();
+        state.routineEdit = name;
+        render();
+      });
     });
     view.querySelectorAll("[data-routine]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -2271,7 +2361,8 @@
     state.activeWorkout = null;
     state.viewingWorkout = false;
     state.finishSummary = { durationSec: durationSec, sets: totalSets, exercises: cleanExercises.length, volume: totalVolume, prCount: prCount,
-                            kcal: estimateCalories({ exercises: cleanExercises, durationSec: durationSec }) };
+                            kcal: estimateCalories({ exercises: cleanExercises, durationSec: durationSec }),
+                            exNames: cleanExercises.map(function (e) { return e.name; }) };
     render();
     await store.saveWorkout(toSave);
   }
@@ -2292,8 +2383,21 @@
       (f.kcal !== null && f.kcal !== undefined ? '<div class="finish-kcal">~' + f.kcal + ' kcal burned <span>(estimate)</span></div>' : '') +
       (f.prCount > 0 ? '<div class="pr-line">\ud83c\udfc6 ' + f.prCount + ' new PR' + (f.prCount > 1 ? 's' : '') + '</div>' : '') +
       '<button class="big-cta" id="finishDoneBtn">Done</button>' +
+      (f.exNames && f.exNames.length ? '<button class="secondary" id="saveRoutineBtn" style="width:100%;margin-top:9px">Save as routine</button>' : '') +
       '</div></div>';
     view.insertAdjacentHTML("beforeend", html);
+    var srb = document.getElementById("saveRoutineBtn");
+    if (srb) srb.addEventListener("click", function () {
+      var names = state.finishSummary.exNames.slice();
+      showTextPrompt("Save as routine", "Routine name", "", function (nm) {
+        if (!state.routines) loadRoutinesLocal();
+        state.routines[nm] = names;
+        store.saveRoutines();
+        state.selectedRoutine = nm;
+        state.finishSummary = null;
+        render();
+      });
+    });
     document.getElementById("finishDoneBtn").addEventListener("click", function () {
       state.finishSummary = null;
       render();
@@ -2443,6 +2547,7 @@
 
   /* ============ HISTORY ============ */
   function renderHistory() {
+    if (state.editWorkoutId) { renderWorkoutEditor(state.editWorkoutId); return; }
     if (!state.workouts.length) {
       view.innerHTML = '<div class="empty-state"><p>No workouts logged yet.</p></div>' +
         '<button class="secondary" id="backfillBtn" style="width:100%">+ Log a past workout</button>';
@@ -2468,7 +2573,8 @@
         w.exercises.map(function (ex) { return '<div class="hist-ex"><b>' + escapeHtml(ex.name) + '</b><br><span class="s">' + escapeHtml(setsSummary(ex.sets, ex.name)) + '</span></div>'; }).join("") +
         '<div class="hist-foot"><span>' + Math.round(workoutVolume(w)).toLocaleString() + ' kg volume</span><span>' + fmtDuration(w.durationSec || 0) + '</span>' +
           (kcal !== null ? '<span>~' + kcal + ' kcal (est.)</span>' : '<span>Log body weight for kcal</span>') + '</div>' +
-        '<div style="text-align:right;margin-top:6px"><button class="ghost danger" data-del="' + w.id + '">Delete</button></div>' +
+        '<div class="hist-btns"><button class="ghost" data-editw="' + w.id + '">Edit</button>' +
+        '<button class="ghost danger" data-del="' + w.id + '">Delete</button></div>' +
         '</div></div>';
     });
     var keepY = view.scrollTop;
@@ -2480,6 +2586,14 @@
     });
     view.querySelectorAll("[data-del]").forEach(function (btn) {
       btn.addEventListener("click", async function (e) { e.stopPropagation(); await store.deleteWorkout(btn.getAttribute("data-del")); if (!db) renderHistory(); });
+    });
+    view.querySelectorAll("[data-editw]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        state.editWorkoutId = btn.getAttribute("data-editw");
+        state.editDraft = null;
+        render();
+      });
     });
   }
 
@@ -2499,6 +2613,100 @@
         render();
       });
     });
+  }
+
+  /* ---- routine editor ---- */
+  function renderRoutineEditor() {
+    var name = state.routineEdit;
+    var list = state.routines[name] || [];
+    var html = '<button class="ex-detail-back" id="rtBack">\u2190 Home</button>';
+    html += '<div class="rt-title-row"><span class="rt-title">' + escapeHtml(name) + '</span>' +
+      '<button class="ghost" id="rtRename">Rename</button></div>';
+
+    if (!list.length) html += '<div class="card muted" style="text-align:center">No exercises yet</div>';
+    list.forEach(function (n, i) {
+      html += '<div class="rt-row">' +
+        '<span class="rt-ex">' + escapeHtml(n) + '</span>' +
+        '<span class="rt-actions">' +
+          '<button class="rt-mv" data-mv="' + i + ':-1"' + (i === 0 ? ' disabled' : '') + '>\u2191</button>' +
+          '<button class="rt-mv" data-mv="' + i + ':1"' + (i === list.length - 1 ? ' disabled' : '') + '>\u2193</button>' +
+          '<button class="rt-rm" data-rmex="' + i + '">\u00d7</button>' +
+        '</span></div>';
+    });
+
+    html += '<button class="secondary" id="rtAdd" style="width:100%;margin-top:12px">+ Add exercise</button>';
+    html += '<div class="finish-bar"><button class="big-cta" id="rtDone">Done</button>' +
+      (DEFAULT_ROUTINE_ORDER.indexOf(name) === -1 ?
+        '<button class="secondary" id="rtDelete">Delete</button>' : '') + '</div>';
+
+    var keepY = view.scrollTop;
+    view.innerHTML = html;
+    view.scrollTop = keepY;
+
+    view.querySelectorAll("[data-mv]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var p = btn.getAttribute("data-mv").split(":");
+        var i = Number(p[0]), dir = Number(p[1]), j = i + dir;
+        if (j < 0 || j >= list.length) return;
+        var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+        store.saveRoutines(); renderRoutineEditor();
+      });
+    });
+    view.querySelectorAll("[data-rmex]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        list.splice(Number(btn.getAttribute("data-rmex")), 1);
+        store.saveRoutines(); renderRoutineEditor();
+      });
+    });
+    document.getElementById("rtAdd").addEventListener("click", function () {
+      showPickPrompt("Add to " + name, allExerciseNames(), function (picked) {
+        if (list.indexOf(picked) === -1) list.push(picked);
+        store.saveRoutines(); renderRoutineEditor();
+      });
+    });
+    document.getElementById("rtRename").addEventListener("click", function () {
+      showTextPrompt("Rename routine", "New name", name, function (nn) {
+        if (!nn || nn === name || state.routines[nn]) return;
+        state.routines[nn] = list;
+        delete state.routines[name];
+        if (state.selectedRoutine === name) state.selectedRoutine = nn;
+        state.routineEdit = nn;
+        store.saveRoutines(); render();
+      });
+    });
+    var delBtn = document.getElementById("rtDelete");
+    if (delBtn) delBtn.addEventListener("click", function () {
+      showConfirm("Delete " + name + "?", "The routine is removed. Logged workouts are unaffected.", "Delete", function () {
+        delete state.routines[name];
+        if (state.selectedRoutine === name) state.selectedRoutine = routineOrder()[0] || "Quick";
+        state.routineEdit = null;
+        store.saveRoutines(); render();
+      });
+    });
+    document.getElementById("rtBack").addEventListener("click", function () { state.routineEdit = null; render(); });
+    document.getElementById("rtDone").addEventListener("click", function () { state.routineEdit = null; render(); });
+  }
+
+  function showTextPrompt(title, placeholder, initial, onSubmit) {
+    closeDialog();
+    var el = document.createElement("div");
+    el.className = "dialog-overlay";
+    el.innerHTML = '<div class="dialog"><h3>' + escapeHtml(title) + '</h3>' +
+      '<input type="text" id="txtIn" placeholder="' + escapeHtml(placeholder) + '" value="' + escapeHtml(initial || "") + '" autocomplete="off">' +
+      '<div class="dialog-actions"><button class="secondary" data-dlg="cancel">Cancel</button>' +
+      '<button class="dialog-ok" data-dlg="ok">Save</button></div></div>';
+    document.getElementById("app").appendChild(el);
+    var input = el.querySelector("#txtIn");
+    input.focus();
+    function submit() {
+      var v = input.value.trim();
+      if (!v) { input.focus(); return; }
+      closeDialog(); onSubmit(v);
+    }
+    el.querySelector('[data-dlg="cancel"]').addEventListener("click", closeDialog);
+    el.querySelector('[data-dlg="ok"]').addEventListener("click", submit);
+    input.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
+    el.addEventListener("click", function (e) { if (e.target === el) closeDialog(); });
   }
 
   /* ============ GOALS ============ */
@@ -2665,6 +2873,86 @@
       });
     });
     return Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; }).slice(0, limit || 4);
+  }
+
+  /* ---- edit a past workout ---- */
+  function renderWorkoutEditor(id) {
+    var w = null;
+    state.workouts.forEach(function (x) { if (x.id === id) w = x; });
+    if (!w) { state.editWorkoutId = null; render(); return; }
+    if (!state.editDraft) state.editDraft = JSON.parse(JSON.stringify(w.exercises || []));
+    var ex = state.editDraft;
+
+    var html = '<button class="ex-detail-back" id="editBack">\u2190 History</button>';
+    html += '<div class="section-title">Editing \u00b7 ' + relDate(w.date) + '</div>';
+
+    ex.forEach(function (e, ei) {
+      var hold = isHold(e.name);
+      html += '<div class="ex-card"><div class="ex-name">' + escapeHtml(e.name) + '</div>';
+      (e.sets || []).forEach(function (st, si) {
+        html += '<div class="set-line' + (hold ? ' hold' : '') + '">' +
+          '<span class="sidx">' + (si + 1) + '</span>' +
+          (hold ? '' : '<input type="number" inputmode="decimal" step="0.5" value="' + (st.weight === "" ? "" : st.weight) + '" data-ew="' + ei + ':' + si + '">') +
+          '<input type="number" inputmode="numeric" value="' + (st.reps === "" ? "" : st.reps) + '" data-er="' + ei + ':' + si + '">' +
+          '<button class="check-btn" data-delset="' + ei + ':' + si + '">\u00d7</button>' +
+          '</div>';
+      });
+      html += '<button class="add-set-link" data-eaddset="' + ei + '">+ Add set</button>';
+      html += '<div class="ex-remove"><button class="ghost danger" data-edelex="' + ei + '">Remove exercise</button></div>';
+      html += '</div>';
+    });
+
+    html += '<div class="finish-bar"><button class="big-cta" id="editSave">Save changes</button>' +
+      '<button class="secondary" id="editCancel">Cancel</button></div>';
+
+    var keepY = view.scrollTop;
+    view.innerHTML = html;
+    view.scrollTop = keepY;
+
+    view.querySelectorAll("[data-ew], [data-er]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        var isW = input.hasAttribute("data-ew");
+        var p = input.getAttribute(isW ? "data-ew" : "data-er").split(":");
+        var e = ex[Number(p[0])];
+        if (!e) return;
+        e.sets[Number(p[1])][isW ? "weight" : "reps"] = input.value === "" ? 0 : Number(input.value);
+      });
+    });
+    view.querySelectorAll("[data-delset]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var p = btn.getAttribute("data-delset").split(":");
+        ex[Number(p[0])].sets.splice(Number(p[1]), 1);
+        renderWorkoutEditor(id);
+      });
+    });
+    view.querySelectorAll("[data-eaddset]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var e = ex[Number(btn.getAttribute("data-eaddset"))];
+        var lastSet = e.sets[e.sets.length - 1] || { weight: 0, reps: 0 };
+        e.sets.push({ weight: lastSet.weight, reps: lastSet.reps });
+        renderWorkoutEditor(id);
+      });
+    });
+    view.querySelectorAll("[data-edelex]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        ex.splice(Number(btn.getAttribute("data-edelex")), 1);
+        renderWorkoutEditor(id);
+      });
+    });
+    document.getElementById("editBack").addEventListener("click", function () {
+      state.editWorkoutId = null; state.editDraft = null; render();
+    });
+    document.getElementById("editCancel").addEventListener("click", function () {
+      state.editWorkoutId = null; state.editDraft = null; render();
+    });
+    document.getElementById("editSave").addEventListener("click", async function () {
+      var cleaned = ex.map(function (e) {
+        return { name: e.name, sets: (e.sets || []).filter(function (st) { return Number(st.reps) > 0; }) };
+      }).filter(function (e) { return e.sets.length > 0; });
+      state.editWorkoutId = null; state.editDraft = null;
+      await store.updateWorkout(id, cleaned);
+      render();
+    });
   }
 
   /* ============ PROGRESS ============ */
