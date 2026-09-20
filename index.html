@@ -338,6 +338,46 @@
     margin-top: 9px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
   }
 
+  /* ---- exercise library ---- */
+  .grp-head {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 13px 13px 13px 0;
+    margin-top: 8px; color: var(--ink); overflow: hidden;
+  }
+  .grp-head.open { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom-color: transparent; }
+  .grp-bar { width: 4px; height: 26px; background: var(--accent); border-radius: 0 3px 3px 0; flex-shrink: 0; }
+  .grp-name {
+    font-family: var(--font-display); font-size: 16px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .grp-count {
+    margin-left: auto; font-size: 11px; color: var(--muted);
+    font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .grp-chev { font-size: 15px; color: var(--accent); width: 14px; text-align: center; }
+  .grp-body {
+    border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 12px 12px; padding: 2px 13px 6px; margin-bottom: 2px;
+  }
+  .ex-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 0; border-bottom: 1px solid var(--border); cursor: pointer;
+  }
+  .ex-row:last-child { border-bottom: none; }
+  .ex-row .en {
+    font-size: 14px; font-weight: 500; text-align: left;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ex-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .ex-best {
+    font-family: var(--font-display); font-size: 14px; color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .ex-none { font-size: 13px; color: var(--faint); }
+  .ex-chev { font-size: 12px; color: var(--faint); }
+  .ex-row.untrained .en { color: var(--muted); }
+
   .tabbar {
     position: fixed;
     bottom: 0; left: 50%;
@@ -678,17 +718,13 @@
 </div>
 
 <script>
-(function () {
-  try {
-    if (localStorage.getItem("forge_seeded_v1")) return;
-    if (!JSON.parse(localStorage.getItem("repledger_workouts_v2") || "[]").length) {
-      localStorage.setItem("repledger_workouts_v2", JSON.stringify([{"id":"1jd5ifau1y4fcwx4n4ok","createdAt":1789613331786,"date":"2026-09-17T02:05:25.318Z","durationSec":2606,"exercises":[{"name":"Squat","sets":[{"weight":20,"reps":12},{"weight":20,"reps":12},{"weight":20,"reps":12}]},{"name":"Bench Press","sets":[{"weight":50,"reps":12},{"weight":50,"reps":12},{"weight":50,"reps":12}]},{"name":"Barbell Row","sets":[{"weight":20,"reps":12},{"weight":20,"reps":12},{"weight":20,"reps":12}]},{"name":"Overhead Press","sets":[{"weight":20,"reps":12},{"weight":30,"reps":12},{"weight":30,"reps":12}]},{"name":"Plank","sets":[{"weight":0,"reps":45},{"weight":0,"reps":45},{"weight":0,"reps":45}]},{"name":"Bicep Curl","sets":[{"weight":7,"reps":12},{"weight":7,"reps":12},{"weight":7,"reps":12}]}]},{"id":"ldj3oaw96tmw3gblm4dl","createdAt":1789613532135,"date":"2026-09-17T00:00:00.000Z","durationSec":0,"exercises":[{"name":"Cycling","sets":[{"weight":0,"reps":20}]}]}]));
-      if (!JSON.parse(localStorage.getItem("repledger_bw_v2") || "[]").length)
-        localStorage.setItem("repledger_bw_v2", JSON.stringify([{"id":"btb3uypzo1btgn9rcvju","createdAt":1789615451600,"date":"2026-09-17T03:24:11.587Z","weight":86.7}]));
-    }
-    localStorage.setItem("forge_seeded_v1", "1");
-  } catch (e) {}
-})();
+(function(){try{
+ if(localStorage.getItem("forge_seeded_v1"))return;
+ if(!JSON.parse(localStorage.getItem("repledger_workouts_v2")||"[]").length){
+  localStorage.setItem("repledger_workouts_v2",JSON.stringify([{"id":"1jd5ifau1y4fcwx4n4ok","createdAt":1789613331786,"date":"2026-09-17T02:05:25.318Z","durationSec":2606,"exercises":[{"name":"Squat","sets":[{"weight":20,"reps":12},{"weight":20,"reps":12},{"weight":20,"reps":12}]},{"name":"Bench Press","sets":[{"weight":50,"reps":12},{"weight":50,"reps":12},{"weight":50,"reps":12}]},{"name":"Barbell Row","sets":[{"weight":20,"reps":12},{"weight":20,"reps":12},{"weight":20,"reps":12}]},{"name":"Overhead Press","sets":[{"weight":20,"reps":12},{"weight":30,"reps":12},{"weight":30,"reps":12}]},{"name":"Plank","sets":[{"weight":0,"reps":45},{"weight":0,"reps":45},{"weight":0,"reps":45}]},{"name":"Bicep Curl","sets":[{"weight":7,"reps":12},{"weight":7,"reps":12},{"weight":7,"reps":12}]}]},{"id":"ldj3oaw96tmw3gblm4dl","createdAt":1789613532135,"date":"2026-09-17T00:00:00.000Z","durationSec":0,"exercises":[{"name":"Cycling","sets":[{"weight":0,"reps":20}]}]}]));
+  if(!JSON.parse(localStorage.getItem("repledger_bw_v2")||"[]").length)
+   localStorage.setItem("repledger_bw_v2",JSON.stringify([{"id":"btb3uypzo1btgn9rcvju","createdAt":1789615451600,"date":"2026-09-17T03:24:11.587Z","weight":86.7}]));}
+ localStorage.setItem("forge_seeded_v1","1");}catch(e){}})();
 </script>
 <script>
 (function () {
@@ -2226,6 +2262,22 @@
   }
 
   /* ============ EXERCISES TAB ============ */
+  // the number worth showing beside an exercise name
+  function rowStat(name) {
+    if (isHold(name)) {
+      var best = 0;
+      state.workouts.forEach(function (w) {
+        (w.exercises || []).forEach(function (ex) {
+          if (ex.name.toLowerCase() !== name.toLowerCase()) return;
+          (ex.sets || []).forEach(function (st) { if (Number(st.reps) > best) best = Number(st.reps); });
+        });
+      });
+      return best ? best + unitOf(name) : null;
+    }
+    var w8 = currentBestFor(name);
+    return w8 ? fmtW(w8) + " kg" : null;
+  }
+
   function renderExercisesTab() {
     if (state.exDetailName) { renderExerciseDetail(state.exDetailName); return; }
     var html = '<input type="text" id="libSearch" placeholder="Search or select an exercise\u2026" value="' + escapeHtml(state.exSearchQuery) + '" autocomplete="off">';
@@ -2238,7 +2290,11 @@
     } else if (q) {
       // flat filtered list while searching
       names.forEach(function (n) {
-        html += '<div class="ex-list-item" data-open="' + escapeHtml(n) + '"><span class="en">' + escapeHtml(n) + '</span><span class="pill">' + muscleOf(n) + '</span></div>';
+        var st = rowStat(n);
+        html += '<div class="ex-row' + (st ? '' : ' untrained') + '" data-open="' + escapeHtml(n) + '">' +
+          '<span class="en">' + escapeHtml(n) + '</span>' +
+          '<span class="ex-meta"><span class="pill">' + muscleOf(n) + '</span>' +
+          (st ? '<span class="ex-best">' + st + '</span>' : '') + '</span></div>';
       });
     } else {
       // grouped by muscle, collapsible
@@ -2251,14 +2307,22 @@
       groupOrder.forEach(function (m) {
         if (!byMuscle[m] || !byMuscle[m].length) return;
         var open = !!state.exOpenGroups[m];
-        html += '<div class="ex-list-item" data-togglegroup="' + escapeHtml(m) + '" style="cursor:pointer">' +
-          '<span class="en">' + m + '</span>' +
-          '<span class="pill">' + byMuscle[m].length + (open ? ' \u2212' : ' +') + '</span></div>';
+        var trained = byMuscle[m].filter(function (n) { return rowStat(n); }).length;
+        html += '<button class="grp-head' + (open ? ' open' : '') + '" data-togglegroup="' + escapeHtml(m) + '">' +
+          '<span class="grp-bar"></span>' +
+          '<span class="grp-name">' + m + '</span>' +
+          '<span class="grp-count">' + trained + '/' + byMuscle[m].length + '</span>' +
+          '<span class="grp-chev">' + (open ? '\u2212' : '+') + '</span></button>';
         if (open) {
+          html += '<div class="grp-body">';
           byMuscle[m].forEach(function (n) {
-            html += '<div class="ex-list-item" data-open="' + escapeHtml(n) + '" style="padding-left:14px">' +
-              '<span class="en" style="font-weight:500;font-size:14px">' + escapeHtml(n) + '</span><span class="muted" style="font-size:11px">\u203a</span></div>';
+            var st2 = rowStat(n);
+            html += '<div class="ex-row' + (st2 ? '' : ' untrained') + '" data-open="' + escapeHtml(n) + '">' +
+              '<span class="en">' + escapeHtml(n) + '</span>' +
+              '<span class="ex-meta">' + (st2 ? '<span class="ex-best">' + st2 + '</span>' : '<span class="ex-none">\u2014</span>') +
+              '<span class="ex-chev">\u203a</span></span></div>';
           });
+          html += '</div>';
         }
       });
     }
@@ -2612,11 +2676,7 @@
 })();
 </script>
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('./sw.js').catch(function () {});
-  });
-}
+if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function(){}); }); }
 </script>
 </body>
 </html>
