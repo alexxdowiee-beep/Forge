@@ -1077,8 +1077,8 @@
 
   var ROUTINES = {
     "Push": ["Bench Press", "Overhead Press", "Incline Bench Press", "Tricep Pushdown", "Lateral Raise"],
-    "Pull": ["Deadlift", "Pull Ups", "Barbell Row", "Bicep Curl", "Lat Pulldown"],
-    "Legs": ["Squat", "Leg Press", "Lunges", "Leg Curl", "Calf Raise"],
+    "Pull": ["Pull Ups", "Barbell Row", "Seated Row", "Rear Delt Fly", "Bicep Curl"],
+    "Legs": ["Squat", "Deadlift", "Lunges", "Leg Curl", "Calf Raise"],
     "Full Body": ["Squat", "Bench Press", "Barbell Row", "Overhead Press", "Plank"],
     "Cardio": [],
     "Quick": [],
@@ -1161,7 +1161,7 @@
       } else localSaveW();
     },
     async saveRoutines() {
-      try { localStorage.setItem("forge_routines_v1", JSON.stringify(state.routines)); } catch (e) {}
+      try { localStorage.setItem("forge_routines_v2", JSON.stringify(state.routines)); } catch (e) {}
       if (db) { try { await db.doc("meta/routines").set({ map: state.routines }); } catch (e) {} }
     },
     async deleteWorkout(id) {
@@ -1220,7 +1220,7 @@
   function loadRoutinesLocal() {
     if (!state.routines) state.routines = JSON.parse(JSON.stringify(ROUTINES));
     try {
-      var r = JSON.parse(localStorage.getItem("forge_routines_v1") || "null");
+      var r = JSON.parse(localStorage.getItem("forge_routines_v2") || "null");
       if (r && typeof r === "object") state.routines = r;
     } catch (e) {}
   }
