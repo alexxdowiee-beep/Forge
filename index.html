@@ -391,6 +391,32 @@
   .stat-box .delta.down { color: var(--muted); }
   .stat-box .delta.flat { color: var(--faint); }
 
+  /* ---- sets per muscle ---- */
+  .spm-row { margin-bottom: 11px; }
+  .spm-row:last-child { margin-bottom: 0; }
+  .spm-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .spm-m { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .spm-v { font-family: var(--font-display); font-size: 15px; color: var(--ink); }
+  .spm-v.hit { color: var(--accent); }
+  .spm-d { font-size: 10px; color: var(--muted); margin-left: 5px; font-family: var(--font-body); font-weight: 700; }
+  .spm-track { position: relative; height: 7px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .spm-fill { height: 100%; background: var(--muted); border-radius: 4px; transition: width 0.4s ease; }
+  .spm-fill.hit { background: var(--accent); }
+  .spm-mark { position: absolute; right: 0; top: -2px; bottom: -2px; width: 2px; background: var(--border); }
+
+  /* ---- estimated 1RM ---- */
+  .orm-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .orm-row:last-of-type { border-bottom: none; }
+  .orm-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .orm-name { font-size: 13px; font-weight: 600; text-align: left; }
+  .orm-val { font-family: var(--font-display); font-size: 18px; flex-shrink: 0; }
+  .orm-u { font-size: 10px; color: var(--muted); margin-left: 2px; }
+  .orm-chg { font-family: var(--font-body); font-size: 10.5px; font-weight: 700; margin-left: 7px; }
+  .orm-chg.up { color: var(--accent); }
+  .orm-chg.down { color: var(--muted); }
+  .orm-spark { margin-top: 2px; opacity: 0.85; }
+  .orm-note { font-size: 10px; color: var(--faint); text-align: center; margin-top: 10px; line-height: 1.4; }
+
   .tabbar {
     position: fixed;
     bottom: 0; left: 50%;
@@ -2590,6 +2616,57 @@
     });
   }
 
+  // hard sets per muscle per week - the metric the research actually uses
+  function setsPerMuscleThisWeek(weeksBack) {
+    var ref = new Date(); ref.setDate(ref.getDate() - (weeksBack || 0) * 7);
+    var ws = startOfWeek(ref), we = new Date(ws); we.setDate(we.getDate() + 7);
+    var counts = {};
+    MUSCLES.forEach(function (m) { if (m !== "Mobility" && m !== "Cardio") counts[m] = 0; });
+    state.workouts.forEach(function (w) {
+      var d = new Date(w.date);
+      if (d < ws || d >= we) return;
+      (w.exercises || []).forEach(function (ex) {
+        var m = muscleOf(ex.name);
+        if (!(m in counts)) return;
+        counts[m] += (ex.sets || []).length;
+      });
+    });
+    return counts;
+  }
+
+  // Epley: weight x (1 + reps/30). Captures more reps at the same load as progress.
+  function epley(weight, reps) {
+    var w8 = Number(weight) || 0, r = Number(reps) || 0;
+    if (w8 <= 0 || r <= 0) return 0;
+    return w8 * (1 + r / 30);
+  }
+
+  function oneRepMaxHistory(name) {
+    var pts = [];
+    state.workouts.slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); })
+      .forEach(function (w) {
+        (w.exercises || []).forEach(function (ex) {
+          if (ex.name.toLowerCase() !== name.toLowerCase() || isHold(ex.name)) return;
+          var best = (ex.sets || []).reduce(function (m, st) { return Math.max(m, epley(st.weight, st.reps)); }, 0);
+          if (best > 0) pts.push({ date: w.date, e1rm: best });
+        });
+      });
+    return pts;
+  }
+
+  // lifts you've done most often, for the strength panel
+  function topLifts(limit) {
+    var freq = {};
+    state.workouts.forEach(function (w) {
+      (w.exercises || []).forEach(function (ex) {
+        if (isHold(ex.name)) return;
+        var has = (ex.sets || []).some(function (st) { return (Number(st.weight) || 0) > 0; });
+        if (has) freq[ex.name] = (freq[ex.name] || 0) + 1;
+      });
+    });
+    return Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; }).slice(0, limit || 4);
+  }
+
   /* ============ PROGRESS ============ */
   function renderProgress() {
     var html = '';
@@ -2600,52 +2677,56 @@
     html += bwVals.length > 1 ? sparkline(bwVals, 280, 60, "var(--accent)") : '<div class="muted" style="font-size:12px">Log body weight to see a trend</div>';
     html += '</div>';
 
-    // weekly totals: session type no longer distorts the line
-    var weekVols = [], weekLabels = [];
-    for (var wi = 11; wi >= 0; wi--) {
-      var ref = new Date(); ref.setDate(ref.getDate() - wi * 7);
-      var ws0 = startOfWeek(ref), we0 = new Date(ws0); we0.setDate(we0.getDate() + 7);
-      var vol = state.workouts.reduce(function (t, w) {
-        var d = new Date(w.date);
-        return (d >= ws0 && d < we0) ? t + workoutVolume(w) : t;
-      }, 0);
-      weekVols.push(vol);
-      weekLabels.push(ws0);
-    }
-    var nonZero = weekVols.filter(function (v) { return v > 0; }).length;
-    html += '<div class="card"><div class="row-between" style="margin-bottom:8px">' +
-      '<span style="font-weight:600;font-size:13px">Volume Per Week</span>' +
-      '<span class="stat-num" style="font-size:16px">' + Math.round(weekVols[weekVols.length - 1]).toLocaleString() + '<span class="muted" style="font-size:11px"> kg</span></span></div>';
-    html += nonZero > 1 ? sparkline(weekVols, 280, 60, "var(--accent)")
-      : '<div class="muted" style="font-size:12px">A few weeks of training will fill this in</div>';
-    html += '</div>';
+    // --- hard sets per muscle this week, against a ~10 set reference ---
+    var spm = setsPerMuscleThisWeek(0);
+    var spmLast = setsPerMuscleThisWeek(1);
+    var TARGET = 10;
+    html += '<div class="card"><div class="row-between" style="margin-bottom:10px">' +
+      '<span style="font-weight:600;font-size:13px">Hard Sets This Week</span>' +
+      '<span class="muted" style="font-size:10.5px;font-weight:700">TARGET ' + TARGET + '+</span></div>';
+    html += Object.keys(spm).map(function (m) {
+      var v = spm[m], prev = spmLast[m] || 0;
+      var pct = Math.min(100, Math.round(v / TARGET * 100));
+      var delta = v - prev;
+      return '<div class="spm-row">' +
+        '<div class="spm-head"><span class="spm-m">' + m + '</span>' +
+          '<span class="spm-v' + (v >= TARGET ? ' hit' : '') + '">' + v +
+          (delta ? '<span class="spm-d">' + (delta > 0 ? '+' : '') + delta + '</span>' : '') + '</span></div>' +
+        '<div class="spm-track"><div class="spm-fill' + (v >= TARGET ? ' hit' : '') + '" style="width:' + pct + '%"></div>' +
+          '<div class="spm-mark"></div></div>' +
+        '</div>';
+    }).join("") + '</div>';
 
-    var nowD = new Date();
-    var mStart = new Date(nowD.getFullYear(), nowD.getMonth(), 1);
-    var pStart = new Date(nowD.getFullYear(), nowD.getMonth() - 1, 1);
-    var thisMonthVol = 0, lastMonthVol = 0;
-    state.workouts.forEach(function (w) {
-      var d = new Date(w.date), v = workoutVolume(w);
-      if (d >= mStart) thisMonthVol += v;
-      else if (d >= pStart && d < mStart) lastMonthVol += v;
-    });
-    var volDelta = lastMonthVol ? Math.round((thisMonthVol - lastMonthVol) / lastMonthVol * 100) : null;
+    // --- estimated 1RM per main lift ---
+    var lifts = topLifts(4);
+    html += '<div class="section-title">Estimated 1RM</div>';
+    if (!lifts.length) {
+      html += '<div class="card muted" style="text-align:center">Log a few weighted sets to see strength trends</div>';
+    } else {
+      html += '<div class="card">' + lifts.map(function (n) {
+        var pts = oneRepMaxHistory(n);
+        var cur = pts.length ? pts[pts.length - 1].e1rm : 0;
+        var first = pts.length ? pts[0].e1rm : 0;
+        var chg = (pts.length > 1 && first > 0) ? Math.round((cur - first) / first * 100) : null;
+        var vals = pts.map(function (p) { return p.e1rm; });
+        return '<div class="orm-row">' +
+          '<div class="orm-top"><span class="orm-name">' + escapeHtml(n) + '</span>' +
+            '<span class="orm-val">' + fmtW(Math.round(cur * 10) / 10) + '<span class="orm-u">kg</span>' +
+            (chg !== null ? '<span class="orm-chg ' + (chg >= 0 ? 'up' : 'down') + '">' +
+              (chg >= 0 ? '+' : '') + chg + '%</span>' : '') + '</span></div>' +
+          (vals.length > 1 ? '<div class="orm-spark">' + sparkline(vals, 280, 28, "var(--accent)") + '</div>' : '') +
+          '</div>';
+      }).join("") + '<div class="orm-note">Epley estimate \u00b7 more reps at the same weight counts as progress</div></div>';
+    }
+
     var last8WeeksCounts = [];
     for (var i = 7; i >= 0; i--) {
-      var ws = new Date(); ws.setDate(ws.getDate() - i * 7);
-      var start = startOfWeek(ws), end = new Date(start); end.setDate(end.getDate() + 7);
-      var c = state.workouts.filter(function (w) { var d = new Date(w.date); return d >= start && d < end; }).length;
-      last8WeeksCounts.push(c);
+      var ws2 = new Date(); ws2.setDate(ws2.getDate() - i * 7);
+      var st2 = startOfWeek(ws2), en2 = new Date(st2); en2.setDate(en2.getDate() + 7);
+      last8WeeksCounts.push(state.workouts.filter(function (w) {
+        var d = new Date(w.date); return d >= st2 && d < en2;
+      }).length);
     }
-    html += '<div class="stat-grid">' +
-      '<div class="stat-box"><span class="stat-num">' + Math.round(thisMonthVol).toLocaleString() + '</span>' +
-        '<div class="stat-label">Volume This Month</div>' +
-        (volDelta !== null ? '<div class="delta ' + (volDelta >= 0 ? 'up' : 'down') + '">' +
-          (volDelta >= 0 ? '\u2191' : '\u2193') + Math.abs(volDelta) + '% vs last</div>'
-          : '<div class="delta flat">first month</div>') + '</div>' +
-      '<div class="stat-box"><span class="stat-num">' + state.workouts.length + '</span><div class="stat-label">Total Workouts</div></div>' +
-      '</div>';
-
     html += '<div class="card" style="margin-top:14px"><div style="font-weight:600;font-size:13px;margin-bottom:8px">Workouts / Week</div>' +
       '<div class="week-spark" style="height:44px">' + last8WeeksCounts.map(function (c) {
         var h = Math.max(4, Math.round((c / Math.max.apply(null, last8WeeksCounts.concat([1]))) * 44));
