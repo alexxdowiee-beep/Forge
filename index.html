@@ -1150,6 +1150,7 @@
       w.createdAt = Date.now();
       if (db) { var ref = await db.collection("workouts").add(w); w.id = ref.id; }
       else { w.id = uid(); state.workouts.unshift(w); localSaveW(); }
+      publishSummary();
     },
     async updateWorkout(id, exercises) {
       var idx = -1;
@@ -1159,6 +1160,7 @@
       if (db) {
         try { await db.doc("workouts/" + id).update({ exercises: exercises }); } catch (e) {}
       } else localSaveW();
+      publishSummary();
     },
     async saveRoutines() {
       try { localStorage.setItem("forge_routines_v2", JSON.stringify(state.routines)); } catch (e) {}
@@ -1167,11 +1169,13 @@
     async deleteWorkout(id) {
       if (db) await db.doc("workouts/" + id).delete();
       else { state.workouts = state.workouts.filter(function (w) { return w.id !== id; }); localSaveW(); }
+      publishSummary();
     },
     async logBodyweight(weight) {
       var entry = { weight: weight, date: new Date().toISOString(), createdAt: Date.now() };
       if (db) { var ref = await db.collection("bodyweight").add(entry); entry.id = ref.id; state.bodyweights.unshift(entry); }
       else { entry.id = uid(); state.bodyweights.unshift(entry); localSaveBW(); }
+      publishSummary();
     },
     async addCustomExercise(name, muscle) {
       if (state.customExercises[name] || EXERCISES.some(function (e) { return e.name.toLowerCase() === name.toLowerCase(); })) return;
@@ -1231,7 +1235,7 @@
   async function initDb() {
     db = await window.claude.use("db");
     state.dbAvailable = !!db;
-    if (!db) { localLoad(); render(); restoreDraft(); return; }
+    if (!db) { localLoad(); render(); restoreDraft(); publishSummary(); return; }
     try {
       var ceSnap = await db.doc("meta/customExercises").get();
       if (ceSnap.exists) { var d = ceSnap.data(); state.customExercises = d.map || {}; }
@@ -1273,7 +1277,7 @@
   // before later `var` assignments exist, which breaks the no-cloud-storage path.
   function boot() {
     if (window.claude && typeof window.claude.use === "function") initDb();
-    else { localLoad(); state.dbAvailable = false; render(); restoreDraft(); }
+    else { localLoad(); state.dbAvailable = false; render(); restoreDraft(); publishSummary(); }
   }
 
   /* ============ helpers ============ */
@@ -1501,6 +1505,42 @@
     }).length;
   }
 
+  /* ---- ecosystem summary: the only thing the Dashboard app reads ----
+     Written to a fixed key ("forge_summary") every time a workout,
+     bodyweight entry or weekly goal changes. See the "App Bundle: Data
+     Sharing Spec" doc for the shared contract this follows. */
+  var SUMMARY_VERSION = 1;
+  function publishSummary() {
+    try {
+      var wk = workoutsThisWeek();
+      var xp = xpStats();
+      var streak = dayStreak();
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var workedOutToday = state.workouts.some(function (w) {
+        var d = new Date(w.date); d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      });
+      var last = state.workouts[0] || null;
+      var headline = wk > 0 ? (wk + ' workout' + (wk === 1 ? '' : 's') + ' this week') : 'No workouts logged this week yet';
+      localStorage.setItem('forge_summary', JSON.stringify({
+        schemaVersion: SUMMARY_VERSION,
+        updatedAt: new Date().toISOString(),
+        appId: 'forge',
+        headline: headline,
+        data: {
+          workedOutToday: workedOutToday,
+          weekWorkoutCount: wk,
+          weekTarget: (state.goals && state.goals.perWeek) || null,
+          currentStreakDays: streak,
+          totalWorkouts: xp.workouts,
+          level: xp.level,
+          lastWorkoutExercises: last ? (last.exercises || []).map(function (e) { return e.name; }) : null,
+          bodyweightKg: latestBodyweight()
+        }
+      }));
+    } catch (e) {}
+  }
+
   function currentBestFor(name) {
     var best = 0;
     state.workouts.forEach(function (w) {
@@ -1520,6 +1560,7 @@
   async function saveGoals() {
     try { localStorage.setItem("repledger_goals_v1", JSON.stringify(state.goals)); } catch (e) {}
     if (db) { try { await db.doc("goals/main").set(state.goals); } catch (e) {} }
+    publishSummary();
   }
 
   function loadGoalsLocal() {
