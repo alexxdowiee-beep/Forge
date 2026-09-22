@@ -15,6 +15,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // only ever touch this app's own files - never anything external
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   // network first so updates land, cache fallback so the gym basement still works
   e.respondWith(
     fetch(e.request)
