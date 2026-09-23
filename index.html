@@ -1677,13 +1677,8 @@
   }
 
   function forgeMark() {
-    return '<svg class="tb-mark" viewBox="0 0 40 40" aria-hidden="true">' +
-      '<path d="M20 3.5 A16.5 16.5 0 0 1 35.6 14.6" fill="none" stroke="var(--accent)" stroke-width="4.2" stroke-linecap="round"/>' +
-      '<path d="M36.2 20.8 A16.5 16.5 0 0 1 24.6 35.9" fill="none" stroke="var(--accent)" stroke-width="3.4" stroke-linecap="round"/>' +
-      '<path d="M17.2 36.2 A16.5 16.5 0 0 1 4.3 25.4" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>' +
-      '<path d="M4.1 17.4 A16.5 16.5 0 0 1 10.6 6.9" fill="none" stroke="var(--accent)" stroke-width="2.8" stroke-linecap="round"/>' +
-      '<path d="M15.2 10.5 L28 10.5 L26 15.2 L19.6 15.2 L19 19.4 L24.6 19.4 L22.8 24 L18.3 24 L16.4 31.5 L11.6 31.5 Z" fill="var(--ink)"/>' +
-      '</svg>';
+    // Matches the app icon (same design as Fuel, Mind, Finance, Dashboard).
+    return '<svg class="tb-mark" viewBox="68 68 376 376" aria-hidden="true"><path d="M390.2,154.9 A168,168 0 0 1 179.7,405.7 M121.8,357.1 A168,168 0 0 1 332.3,106.3" fill="none" stroke="var(--accent)" stroke-width="30"/><g fill="var(--ink)" transform="translate(256 256) skewX(-12) translate(-256 -256) translate(188.5 156)"><polygon points="0,0 135,0 135,46 50,46 50,80 110,80 110,124 50,124 50,200 0,200"/></g></svg>';
   }
 
   /* ---- keep the page where the user left it across re-renders ---- */
@@ -2816,6 +2811,7 @@
       '<div class="stat-box"><span class="stat-num">' + x.prs + '</span><div class="stat-label">PRs Set</div></div>' +
       '</div>';
     html += '<div class="xp-note">50 XP a workout \u00b7 5 XP a set \u00b7 100 XP a PR</div>';
+    html += '<div class="section-title" style="margin-top:26px;">Backup</div><div id="backupStatus"></div>';
 
     view.innerHTML = html;
 
@@ -3244,6 +3240,64 @@ if ('serviceWorker' in navigator) { window.addEventListener('load', function () 
   function start() { askToKeepData(); setTimeout(run, 3000); }
   if (document.readyState === 'complete') start();
   else window.addEventListener('load', start);
+})();
+</script>
+<!-- ============================================================
+     BACKUP STATUS CARD
+     Identical in every app. Put <div id="backupStatus"></div> wherever
+     the app should show it (usually its settings/targets screen) and
+     this fills it in: when everything was last backed up, and a
+     "Back up now" button. Needs the ECOSYSTEM AUTO-BACKUP block above.
+     ============================================================ -->
+<script>
+(function () {
+  "use strict";
+  function ago(iso) {
+    var t = new Date(iso).getTime();
+    if (!t || isNaN(t)) return null;
+    var m = Math.round((Date.now() - t) / 60000);
+    if (m < 2) return 'just now';
+    if (m < 60) return m + ' minutes ago';
+    var h = Math.round(m / 60);
+    if (h < 24) return h + (h === 1 ? ' hour ago' : ' hours ago');
+    var d = Math.round(h / 24);
+    return d + (d === 1 ? ' day ago' : ' days ago');
+  }
+  function render(msg, tone) {
+    var el = document.getElementById('backupStatus');
+    if (!el || !window.ecosystemBackup) return;
+    var b = window.ecosystemBackup, last = null;
+    try { last = localStorage.getItem(b.stampKey); } catch (e) {}
+    var set = !!b.relay();
+    var age = last ? (Date.now() - new Date(last).getTime()) / 3600000 : null;
+    var line = !set ? 'Backups aren’t set up on this phone yet — add your relay in Finance → Settings.'
+             : last ? 'Everything your apps hold on this phone was last backed up ' + ago(last) + '.'
+             : 'Nothing backed up yet. One goes automatically a few seconds after you open any app.';
+    var warn = set && (age === null || age > 48);
+    el.innerHTML =
+      '<div style="background:var(--bg-raised,var(--surface));border:1px solid var(--line,var(--surface2));border-radius:14px;padding:14px 16px;">' +
+        '<div style="font-size:13px;line-height:1.55;color:' + (warn ? 'var(--accent,var(--gold))' : 'var(--ink-soft,var(--muted))') + ';">' +
+          (warn && last ? '⚠ ' : '') + line + '</div>' +
+        (set ? '<button type="button" id="backupNowBtn2" style="margin-top:10px;width:100%;padding:11px;border-radius:12px;' +
+                 'background:var(--surface2);border:1px solid var(--line,var(--faint));color:var(--ink);font:inherit;font-size:14px;font-weight:700;cursor:pointer;">Back up now</button>' : '') +
+        (msg ? '<div style="margin-top:8px;font-size:12px;font-weight:700;color:' + (tone === 'bad' ? 'var(--warn,var(--danger))' : 'var(--good,#5FBF6E)') + ';">' + msg + '</div>' : '') +
+      '</div>';
+    var btn = document.getElementById('backupNowBtn2');
+    if (btn) btn.addEventListener('click', function () {
+      btn.disabled = true; btn.textContent = 'Backing up…';
+      b.send().then(function () { render('Backed up ✓', 'ok'); })
+              .catch(function (e) { render('Couldn’t back up: ' + (e && e.message ? e.message : 'unknown error'), 'bad'); });
+    });
+  }
+  window.renderBackupStatus = function () { render(); };
+  // Refresh whenever the card's screen is shown or the app comes back to the front.
+  new MutationObserver(function () {
+    var el = document.getElementById('backupStatus');
+    if (el && !el.dataset.done && el.offsetParent !== null) { el.dataset.done = '1'; render(); }
+    else if (el && el.offsetParent === null) { delete el.dataset.done; }
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) render(); });
+  if (document.readyState === 'complete') render(); else window.addEventListener('load', render);
 })();
 </script>
 </body>
