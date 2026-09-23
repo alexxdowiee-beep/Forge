@@ -1134,6 +1134,7 @@
   var LS_W = "repledger_workouts_v2", LS_BW = "repledger_bw_v2", LS_CE = "repledger_customex_v2";
   function localLoad() {
     try { state.workouts = JSON.parse(localStorage.getItem(LS_W) || "[]"); } catch (e) { state.workouts = []; }
+    sortWorkouts();
     try { state.bodyweights = JSON.parse(localStorage.getItem(LS_BW) || "[]"); } catch (e) { state.bodyweights = []; }
     try { state.customExercises = JSON.parse(localStorage.getItem(LS_CE) || "{}"); } catch (e) { state.customExercises = {}; }
     loadGoalsLocal();
@@ -1149,7 +1150,7 @@
     async saveWorkout(w) {
       w.createdAt = Date.now();
       if (db) { var ref = await db.collection("workouts").add(w); w.id = ref.id; }
-      else { w.id = uid(); state.workouts.unshift(w); localSaveW(); }
+      else { w.id = uid(); state.workouts.unshift(w); sortWorkouts(); localSaveW(); }
       publishSummary();
     },
     async updateWorkout(id, exercises) {
@@ -1214,11 +1215,20 @@
       try { var snap = await db.doc("drafts/active").get(); if (snap.exists) d = snap.data(); } catch (e) {}
     }
     if (!d || !d.exercises || !d.startedAt) return;
-    // anything older than 12h is stale - drop it rather than resurrect yesterday's session
-    if (Date.now() - d.startedAt > 12 * 3600 * 1000) { clearDraft(); return; }
+    // Older than 12h: you almost certainly forgot to tap Finish. Never throw
+    // it away - bring it back as a back-dated session (so it isn't timed as a
+    // 20-hour workout) and let you finish or discard it yourself.
+    var stale = Date.now() - d.startedAt > 12 * 3600 * 1000;
+    if (stale && !d.backdated) { d.backdated = true; d.wasUnfinished = true; }
     state.activeWorkout = d;
     state.viewingWorkout = false;
+    if (stale) { try { localStorage.setItem(LS_DRAFT, JSON.stringify(d)); } catch (e) {} }
     render();
+    if (stale && d.wasUnfinished) {
+      showConfirm("Unfinished workout",
+        "You started a workout on " + shortDate(d.date) + " but didn't tap Finish. It's been kept \u2014 save it now, or tap Keep going to look at it first.",
+        "Save it", finishWorkout);
+    }
   }
 
   function loadRoutinesLocal() {
@@ -1229,7 +1239,33 @@
     } catch (e) {}
   }
 
-  function sortWorkouts() { state.workouts.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); }
+  // Newest first by the day the workout HAPPENED (a back-dated session sits
+  // where it belongs), then by when it was saved for same-day ties.
+  function byDateAsc(a, b) {
+    var d = new Date(a.date).getTime() - new Date(b.date).getTime();
+    return d || ((a.createdAt || 0) - (b.createdAt || 0));
+  }
+  function sortWorkouts() { state.workouts.sort(function (a, b) { return byDateAsc(b, a); }); }
+  function chronological() { return state.workouts.slice().sort(byDateAsc); }
+
+  // A PR is a heavier top weight than ever before, OR more reps than ever at
+  // your heaviest weight (a "rep PR"). best = { w: top weight, r: most reps at it }.
+  function topSet(sets) {
+    var w = 0, r = 0;
+    (sets || []).forEach(function (s) {
+      var sw = Number(s.weight) || 0, sr = Number(s.reps) || 0;
+      if (sw > w) { w = sw; r = sr; } else if (sw === w && sr > r) r = sr;
+    });
+    return { w: w, r: r };
+  }
+  function beats(top, best) {
+    if (top.w <= 0) return null;
+    if (!best) return null;                           // first time: a baseline, not a PR
+    if (top.w > best.w) return 'weight';
+    if (top.w === best.w && top.r > best.r) return 'reps';
+    return null;
+  }
+  function better(top, best) { return !best || top.w > best.w || (top.w === best.w && top.r > best.r) ? top : best; }
   function sortBW() { state.bodyweights.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); }
 
   async function initDb() {
@@ -1460,16 +1496,16 @@
 
   /* ---- progression: XP, levels, streaks ---- */
   function xpStats() {
-    var chrono = state.workouts.slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    var chrono = chronological();
     var sets = 0, prs = 0, best = {};
     chrono.forEach(function (w) {
       (w.exercises || []).forEach(function (ex) {
         sets += (ex.sets || []).length;
         if (isHold(ex.name)) return;
-        var top = (ex.sets || []).reduce(function (m, x) { return Math.max(m, Number(x.weight) || 0); }, 0);
-        if (top <= 0) return;
-        if (best[ex.name] === undefined) best[ex.name] = top;
-        else if (top > best[ex.name]) { prs++; best[ex.name] = top; }
+        var top = topSet(ex.sets);
+        if (top.w <= 0) return;
+        if (beats(top, best[ex.name])) prs++;
+        best[ex.name] = better(top, best[ex.name]);
       });
     });
     var xp = chrono.length * 50 + sets * 5 + prs * 100;
@@ -1566,7 +1602,8 @@
   function loadGoalsLocal() {
     try {
       var g = JSON.parse(localStorage.getItem("repledger_goals_v1") || "null");
-      if (g) state.goals = { bodyweight: g.bodyweight || null, perWeek: g.perWeek || null, lifts: g.lifts || [] };
+      if (g) state.goals = { bodyweight: g.bodyweight || null, bodyweightStart: g.bodyweightStart || null,
+                             perWeek: g.perWeek || null, lifts: g.lifts || [] };
     } catch (e) {}
   }
 
@@ -2378,11 +2415,17 @@
 
     var durationSec = w.backdated ? 0 : Math.floor((Date.now() - w.startedAt) / 1000);
     var prCount = 0;
+    var thisDay = new Date(w.date).getTime();
     cleanExercises.forEach(function (ex) {
       if (isHold(ex.name)) return;
-      var prevBest = bestWeightBefore(ex.name);
-      var newBest = Math.max.apply(null, ex.sets.map(function (s) { return Number(s.weight) || 0; }));
-      if (newBest > prevBest) prCount++;
+      var prev = null;
+      state.workouts.forEach(function (o) {
+        if (new Date(o.date).getTime() > thisDay) return;   // later sessions don't count against it
+        (o.exercises || []).forEach(function (e2) {
+          if (e2.name.toLowerCase() === ex.name.toLowerCase()) prev = better(topSet(e2.sets), prev);
+        });
+      });
+      if (beats(topSet(ex.sets), prev)) prCount++;
     });
     var totalVolume = cleanExercises.reduce(function (sum, ex) { return sum + sessionVolume(ex); }, 0);
     var totalSets = cleanExercises.reduce(function (n, ex) { return n + ex.sets.length; }, 0);
@@ -2888,7 +2931,7 @@
 
   function oneRepMaxHistory(name) {
     var pts = [];
-    state.workouts.slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); })
+    chronological()
       .forEach(function (w) {
         (w.exercises || []).forEach(function (ex) {
           if (ex.name.toLowerCase() !== name.toLowerCase() || isHold(ex.name)) return;
@@ -3060,16 +3103,17 @@
 
     html += '<div class="section-title">Personal Records</div>';
     // walk forward in time so each PR keeps the date it was actually set
-    var chrono = state.workouts.slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    var chrono = chronological();
     var bestSoFar = {}, prEvents = [];
     chrono.forEach(function (w) {
       (w.exercises || []).forEach(function (ex) {
         if (isHold(ex.name)) return;
-        var top = (ex.sets || []).reduce(function (m, st) { return Math.max(m, Number(st.weight) || 0); }, 0);
-        if (top <= 0) return;
-        if (bestSoFar[ex.name] === undefined || top > bestSoFar[ex.name]) {
-          bestSoFar[ex.name] = top;
-          prEvents.push({ name: ex.name, weight: top, date: w.date });
+        var top = topSet(ex.sets);
+        if (top.w <= 0) return;
+        var kind = beats(top, bestSoFar[ex.name]);
+        if (!bestSoFar[ex.name] || kind) {
+          bestSoFar[ex.name] = better(top, bestSoFar[ex.name]);
+          prEvents.push({ name: ex.name, weight: top.w, reps: top.r, date: w.date });
         }
       });
     });
@@ -3077,11 +3121,12 @@
     if (!prEvents.length) html += '<div class="card muted" style="text-align:center">No PRs yet \u2014 finish a workout to set some</div>';
     else {
       html += '<div class="card">' + prEvents.slice(0, 8).map(function (p) {
-        var current = bestSoFar[p.name] === p.weight;
+        var cur = bestSoFar[p.name];
+        var current = cur && cur.w === p.weight && cur.r === p.reps;
         return '<div class="pr-row">' +
           '<span class="pr-left">\ud83c\udfc6 ' + escapeHtml(p.name) +
             (current ? '' : '<span class="pr-old">beaten</span>') + '</span>' +
-          '<span class="pr-right"><span class="pw">' + fmtW(p.weight) + ' kg</span>' +
+          '<span class="pr-right"><span class="pw">' + fmtW(p.weight) + ' kg \u00d7 ' + p.reps + '</span>' +
           '<span class="pr-when">' + relDate(p.date) + '</span></span></div>';
       }).join("") + '</div>';
     }
