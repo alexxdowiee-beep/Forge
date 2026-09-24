@@ -786,11 +786,23 @@
     <button class="tab" data-tab="exercises"><span class="ic">&#9998;</span>Exercises</button>
     <button class="tab" data-tab="history"><span class="ic">&#8801;</span>History</button>
     <button class="tab" data-tab="progress"><span class="ic">&#9650;</span>Progress</button>
-    <button class="tab" data-tab="goals"><span class="ic">&#9678;</span>Goals</button>
+    <button class="tab" data-tab="goals"><span class="ic">&#9881;</span>Settings</button>
   </nav>
 </div>
 
 <script>
+
+  // Shared date format across all apps (NZ style): "Thu 24 Sep", "24 Sep", "24 September", "Thursday"
+  function fmtDate(d, opt) {
+    var DS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], DL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var MS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var ML = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    opt = opt || {}; var out = [];
+    if (opt.weekday) out.push(opt.weekday === 'long' ? DL[d.getDay()] : DS[d.getDay()]);
+    if (opt.day) out.push(d.getDate());
+    if (opt.month) out.push(opt.month === 'long' ? ML[d.getMonth()] : MS[d.getMonth()]);
+    return out.join(' ');
+  }
 (function(){try{
  if(localStorage.getItem("forge_seeded_v1"))return;
  if(!JSON.parse(localStorage.getItem("repledger_workouts_v2")||"[]").length){
@@ -1353,7 +1365,7 @@
   function sessionVolume(ex) { return (ex.sets || []).reduce(function (s, x) { return s + (Number(x.weight) || 0) * (Number(x.reps) || 0); }, 0); }
   function workoutVolume(w) { return (w.exercises || []).reduce(function (s, ex) { return s + sessionVolume(ex); }, 0); }
   function workoutSetCount(w) { return (w.exercises || []).reduce(function (n, ex) { return n + (ex.sets ? ex.sets.length : 0); }, 0); }
-  function shortDate(iso) { return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }); }
+  function shortDate(iso) { return fmtDate(new Date(iso), { day: "numeric", month: "short" }); }
   function fmtDuration(sec) { if (!sec) return "\u2014"; var m = Math.round(sec / 60); return m + " min"; }
   function fmtClock(sec) {
     sec = Math.max(0, sec);
@@ -1768,7 +1780,7 @@
         (w.backdated ? shortDate(w.date) : fmtClock(Math.floor((Date.now() - w.startedAt) / 1000))) + '</span>';
     } else if (state.tab === "home") {
       var x = xpStats(), streak = dayStreak(), wk = workoutsThisWeek();
-      right = '<span class="tb-right">' + new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" }) + '</span>';
+      right = '<span class="tb-right">' + fmtDate(new Date(), { weekday: "short", day: "numeric", month: "short" }) + '</span>';
       momentum = '<div class="momentum">' +
         '<div class="mo-row"><span class="mo-lvl">Level ' + x.level + '</span>' +
           '<span class="mo-xp">' + x.into + ' / ' + x.need + ' XP</span></div>' +
@@ -1788,7 +1800,7 @@
       var bw = latestBodyweight();
       right = '<span class="tb-right">' + (bw ? fmtW(bw) + ' kg' : '\u2014') + '</span>';
     } else if (state.tab === "goals") {
-      title = "Goals";
+      title = "Settings";
       right = '<span class="tb-right">' + activeGoalCount() + ' active</span>';
     }
 
