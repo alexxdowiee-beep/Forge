@@ -781,6 +781,9 @@
   .tab .ic { line-height:0; padding:4px 14px; }
   .tab .ic .ci { width:22px; height:22px; display:block; }
   .empty-state .emoji .ci { color: var(--ink-soft, var(--muted)); }
+  .bw-line { display:flex; justify-content:space-between; align-items:center; width:100%; background:none; border:none; border-top:1px solid var(--border); margin-top:12px; padding:12px 0 0; font: inherit; font-size:14px; color: var(--muted); cursor:pointer; text-align:left; }
+  .bw-line b { color: var(--ink); }
+  .bw-log { color: var(--accent); font-weight:700; }
 </style>
 </head>
 <body>
@@ -1788,11 +1791,8 @@
       var x = xpStats(), streak = dayStreak(), wk = workoutsThisWeek();
       right = '<span class="tb-right">' + fmtDate(new Date(), { weekday: "short", day: "numeric", month: "short" }) + '</span>';
       momentum = '<div class="momentum">' +
-        '<div class="mo-row"><span class="mo-lvl">Level ' + x.level + '</span>' +
-          '<span class="mo-xp">' + x.into + ' / ' + x.need + ' XP</span></div>' +
-        '<div class="mo-track"><div class="mo-fill" style="width:' + x.pct + '%"></div></div>' +
         '<div class="mo-sub">' + wk + ' this week' +
-          (streak > 1 ? ' \u00b7 ' + streak + '-day streak \ud83d\udd25' : '') +
+          (streak > 1 ? ' \u00b7 ' + streak + '-day streak' : '') +
           (x.prs ? ' \u00b7 ' + x.prs + ' PRs' : '') + '</div>' +
         '</div>';
     } else if (state.tab === "exercises") {
@@ -1855,7 +1855,6 @@
   function renderHome() {
     var g = state.goals || {};
     var html = "";
-    if (state.dbAvailable === false) html += '<div class="offline-note">Saved on this device only \u2014 storage isn\u2019t connected.</div>';
 
     // --- 1. routine collapsed to one row; Start sits high on the screen ---
     var preview = state.routines[state.selectedRoutine] || [];
@@ -1910,11 +1909,11 @@
 
     // --- 5. Last Workout moved up, directly under the session card ---
     var last = state.workouts[0];
-    html += '<div class="section-title">Last Workout</div>';
+    var lastHtml = '<div class="section-title">Last Workout</div>';
     if (last) {
       var lastKcal = estimateCalories(last);
       var lastTop = topSetLabel(last);
-      html += '<div class="card last-card"><div class="row-between">' +
+      lastHtml += '<div class="card last-card"><div class="row-between">' +
         '<div><div class="hist-title"><span class="hist-name">' + escapeHtml(sessionName(last)) + '</span>' +
           '<span class="hist-when">' + relDate(last.date) + '</span></div>' +
         '<div class="muted" style="font-size:12px;margin-top:3px">' + workoutSetCount(last) + (workoutSetCount(last) === 1 ? ' set' : ' sets') +
@@ -1922,7 +1921,7 @@
         '<div class="hist-kcal">' + (lastKcal !== null ? '<span class="stat-num">~' + lastKcal + '</span><span class="kcal-u">kcal</span>' : '<span class="kcal-na">\u2014</span>') + '</div>' +
         '</div></div>';
     } else {
-      html += '<div class="card muted" style="text-align:center;padding:20px">No workouts yet</div>';
+      lastHtml += '<div class="card muted" style="text-align:center;padding:20px">No workouts yet</div>';
     }
 
     // --- 4. body weight folded into a compact stats row (2 = no repeated week count) ---
@@ -1933,14 +1932,9 @@
       if (Math.abs(diff) >= 0.1) trend = (diff > 0 ? "\u2191" : "\u2193") + fmtW(Math.abs(Math.round(diff * 10) / 10));
     }
     var streak = dayStreak();
-    html += '<div class="quick-row">' +
-      '<button class="quick-stat" id="logBwBtn">' +
-        '<span class="qs-val">' + (bw ? fmtW(bw.weight) : "\u2014") + '<span class="qs-unit">kg</span></span>' +
-        '<span class="qs-lbl">Weight ' + (trend ? '<span class="qs-trend">' + trend + '</span>' : '<span class="qs-add">+</span>') + '</span>' +
-      '</button>' +
-      '<div class="quick-stat"><span class="qs-val">' + streak + '</span><span class="qs-lbl">Day streak</span></div>' +
-      '<div class="quick-stat"><span class="qs-val">' + state.workouts.length + '</span><span class="qs-lbl">Total sessions</span></div>' +
-      '</div>';
+    // body weight now sits as one line inside the This Week card
+    var bwHtml = '<button class="bw-line" id="logBwBtn"><span>Body weight <b>' + (bw ? fmtW(bw.weight) + ' kg' : '\u2014') + '</b>' +
+      (trend ? ' <span class="qs-trend">' + trend + '</span>' : '') + '</span><span class="bw-log">+ Log</span></button>';
 
     // week chart kept, but the count itself lives in the banner now
     var now = new Date();
@@ -1955,8 +1949,8 @@
     var types = weekDayTypes();
     var todayIdx = (now.getDay() + 6) % 7;
     var dayLbls = ["M","T","W","T","F","S","S"];
-    html += '<div class="section-title">This Week</div>';
-    html += '<div class="card">' +
+    var weekHtml = '<div class="section-title">This Week</div>';
+    weekHtml += '<div class="card">' +
       '<div class="row-between" style="margin-bottom:10px">' +
         '<span class="muted" style="font-size:12px;font-weight:700">' +
           (g.perWeek ? thisWeekCount + ' of ' + g.perWeek + ' target' : thisWeekCount + (thisWeekCount === 1 ? ' session' : ' sessions')) + '</span>' +
@@ -1966,7 +1960,7 @@
         return '<div class="' + cls + '">' +
           '<div class="day-mark">' + (t ? t.letter : (i === todayIdx ? "\u00b7" : "")) + '</div>' +
           '<div class="day-lbl">' + dayLbls[i] + '</div></div>';
-      }).join("") + '</div>' +
+      }).join("") + '</div>' + bwHtml +
       '</div>';
 
     // ---------- 1. muscle recovery ----------
@@ -1984,6 +1978,8 @@
         }).join("") +
         '</div><div class="rec-note">Days since last trained</div></div>';
     }
+    // order: what to train next (recovery) -> this week -> last workout
+    html += weekHtml + lastHtml;
 
     view.innerHTML = html;
 
@@ -2890,14 +2886,11 @@
 
     // --- progression summary ---
     var x = xpStats();
-    html += '<div class="section-title">Progression</div>';
+    html += '<div class="section-title">Totals</div>';
     html += '<div class="stat-grid">' +
-      '<div class="stat-box"><span class="stat-num">' + x.level + '</span><div class="stat-label">Level</div></div>' +
-      '<div class="stat-box"><span class="stat-num">' + x.xp.toLocaleString() + '</span><div class="stat-label">Total XP</div></div>' +
       '<div class="stat-box"><span class="stat-num">' + x.workouts + '</span><div class="stat-label">Workouts</div></div>' +
       '<div class="stat-box"><span class="stat-num">' + x.prs + '</span><div class="stat-label">PRs Set</div></div>' +
       '</div>';
-    html += '<div class="xp-note">50 XP a workout \u00b7 5 XP a set \u00b7 100 XP a PR</div>';
     html += '<div class="section-title" style="margin-top:26px;">Backup</div><div id="backupStatus"></div>';
 
     view.innerHTML = html;
