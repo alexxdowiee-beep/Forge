@@ -1546,6 +1546,20 @@
      bodyweight entry or weekly goal changes. See the "App Bundle: Data
      Sharing Spec" doc for the shared contract this follows. */
   var SUMMARY_VERSION = 1;
+  function ymdOf(iso) { var d = new Date(iso), p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+  // PRs set in workouts dated on/after `since` (same rule as everywhere else).
+  function prsSince(since) {
+    var best = {}, n = 0;
+    chronological().forEach(function (w) {
+      (w.exercises || []).forEach(function (ex) {
+        if (isHold(ex.name)) return;
+        var top = topSet(ex.sets); if (top.w <= 0) return;
+        if (beats(top, best[ex.name]) && new Date(w.date).getTime() >= since) n++;
+        best[ex.name] = better(top, best[ex.name]);
+      });
+    });
+    return n;
+  }
   function publishSummary() {
     try {
       var wk = workoutsThisWeek();
@@ -1571,7 +1585,16 @@
           totalWorkouts: xp.workouts,
           level: xp.level,
           lastWorkoutExercises: last ? (last.exercises || []).map(function (e) { return e.name; }) : null,
-          bodyweightKg: latestBodyweight()
+          bodyweightKg: latestBodyweight(),
+          // ---- detail for the Dashboard's charts and suggestions ----
+          lastWorkoutDate: last ? ymdOf(last.date) : null,
+          daysSinceByMuscle: recoveryByMuscle(),          // { Legs: 14, Chest: 2, ... } null = never
+          workoutDates: state.workouts.filter(function (w) { return Date.now() - new Date(w.date).getTime() < 70 * 864e5; })
+                          .map(function (w) { return ymdOf(w.date); }),
+          bodyweightGoalKg: (state.goals && state.goals.bodyweight) || null,
+          bodyweightHistory: (state.bodyweights || []).filter(function (b) { return Date.now() - new Date(b.date).getTime() < 120 * 864e5; })
+                          .map(function (b) { return { date: ymdOf(b.date), kg: Number(b.weight) }; }).reverse(),
+          prsThisWeek: prsSince(startOfWeek(new Date()).getTime())
         }
       }));
     } catch (e) {}
