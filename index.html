@@ -633,7 +633,7 @@
   }
   .finish-card .fire { font-size: 34px; margin-bottom: 4px; }
   .finish-card h2 { font-family: var(--font-display); font-size: 22px; margin-bottom: 20px; }
-  .finish-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .finish-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
   .finish-grid .fstat-num { font-size: 22px; }
   .finish-grid .fstat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
   .finish-vol { font-size: 30px; margin-bottom: 4px; }
@@ -682,6 +682,9 @@
     font-variant-numeric: tabular-nums;
   }
   .finish-kcal { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .prog-tip { display:flex; align-items:center; gap:10px; background: rgba(95,191,110,.10); border:1px dashed rgba(95,191,110,.6); border-radius:10px; padding:9px 12px; margin:-4px 0 12px; font-size:13px; color: var(--muted); text-align:left; }
+  .prog-tip b { color: var(--ink); }
+  .prog-use { flex:none; background: var(--surface2); border:1px solid var(--border); color: var(--ink); border-radius:8px; padding:7px 12px; font-weight:700; font-size:13px; cursor:pointer; }
   .finish-kcal span { font-size: 12px; color: var(--faint); }
 
   .hist-detail { display: none; margin-top: 10px; }
@@ -2029,6 +2032,18 @@
   }
 
   /* ============ WORKOUT (active session) ============ */
+  // Simple "double progression" rule: if every set last time was at the same weight
+  // and reached 10+ reps, suggest the next weight up (2.5 kg, or 1 kg under 20 kg).
+  // It's only a suggestion - the numbers don't change unless you tap Use.
+  function progressionFor(last, hold) {
+    if (hold || !last || !last.sets || !last.sets.length) return null;
+    var w0 = Number(last.sets[0].weight) || 0;
+    if (w0 <= 0) return null;
+    var same = last.sets.every(function (st) { return Number(st.weight) === w0; });
+    var minReps = Math.min.apply(null, last.sets.map(function (st) { return Number(st.reps) || 0; }));
+    if (!same || minReps < 10) return null;
+    return { from: w0, next: Math.round((w0 + (w0 < 20 ? 1 : 2.5)) * 2) / 2, minReps: minReps };
+  }
   function renderWorkoutScreen() {
     var w = state.activeWorkout;
     var html = "";
@@ -2074,10 +2089,16 @@
 
       html += '<div class="ex-card"><div class="ex-name">' + escapeHtml(ex.name) + '</div>';
       html += '<div class="last-time">Last time: ' + (last ? escapeHtml(setsSummary(last.sets, ex.name)) : 'no previous data') + '</div>';
+      var prog = doneHere === 0 ? progressionFor(last, hold) : null;
+      if (prog) html += '<div class="prog-tip"><span>Suggestion: try <b>' + fmtW(prog.next) + ' kg</b> \u2014 you did ' + prog.minReps + '+ reps on every set last time.</span>' +
+        '<button class="prog-use" data-prog="' + exIdx + ':' + prog.next + ':' + prog.from + '">Use</button></div>';
 
       for (var i = 0; i < Math.max(plannedCount, ex.sets.length); i++) {
         var defReps = last && last.sets[i] ? last.sets[i].reps : (hold ? defaultHold(ex.name) : "");
-        var s = ex.sets[i] || { weight: last && last.sets[i] ? last.sets[i].weight : "", reps: defReps, done: false };
+        var defW = last && last.sets[i] ? last.sets[i].weight : "";
+        var s = ex.sets[i] || { weight: defW, reps: defReps, done: false };
+        if (!s.done) s = { weight: (s.weight === "" || s.weight === undefined) ? defW : s.weight,
+                           reps: (s.reps === "" || s.reps === undefined) ? defReps : s.reps, done: false };
         if (!s.done && firstUndoneIdx === -1) firstUndoneIdx = i;
         var isActive = i === firstUndoneIdx;
         var flash = (state.flashSet === exIdx + ":" + i) ? " flash" : "";
@@ -2117,12 +2138,33 @@
     html += '<div class="add-ex-box"><input type="text" id="exSearch" placeholder="Search exercises\u2026" value="' + escapeHtml(state.exSearchQuery) + '" autocomplete="off"></div>';
     html += '<div id="exSearchWrap">' + searchResultsHtml() + '</div>';
 
-    html += '<div class="finish-bar"><button class="big-cta" id="finishBtn">Finish Workout</button><button class="secondary" id="cancelWorkoutBtn2">Cancel</button></div>';
+    html += '<div class="finish-bar"><button class="big-cta" id="finishBtn">Finish Workout</button></div>';
 
     var keepY = view.scrollTop;
     view.innerHTML = html;
     view.scrollTop = keepY;
     updateTopbar();
+
+    // "Use" on a progression suggestion: put the new weight in every set not yet ticked
+    view.querySelectorAll("[data-prog]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var p = btn.getAttribute("data-prog").split(":");
+        var exI = Number(p[0]), next = Number(p[1]), from = Number(p[2]);
+        var ex = w.exercises[exI];
+        if (!ex) return;
+        view.querySelectorAll('[data-w^="' + exI + ':"]').forEach(function (input) {
+          var sI = Number(input.getAttribute("data-w").split(":")[1]);
+          if (ex.sets[sI] && ex.sets[sI].done) return;
+          if (input.value !== "" && Number(input.value) !== from) return;   // leave anything you've changed
+          input.value = next;
+          var st = ex.sets[sI] || { weight: "", reps: "", done: false };
+          st.weight = next; ex.sets[sI] = st;
+        });
+        btn.closest(".prog-tip").remove();
+        saveDraft();
+        buzz(12);
+      });
+    });
 
     // weight steppers: 2.5 kg a tap, no keyboard needed
     view.querySelectorAll("[data-step]").forEach(function (btn) {
@@ -2155,7 +2197,6 @@
     if (!state.restEndsAt) stopRestTimer();
 
     document.getElementById("cancelWorkoutBtn").addEventListener("click", cancelWorkout);
-    document.getElementById("cancelWorkoutBtn2").addEventListener("click", cancelWorkout);
     document.getElementById("finishBtn").addEventListener("click", finishWorkout);
     var skipBtn = document.getElementById("skipRestBtn");
     if (skipBtn) skipBtn.addEventListener("click", skipRest);
@@ -2436,8 +2477,24 @@
     render();
   }
 
-  async function finishWorkout() {
+  async function finishWorkout(force) {
     var w = state.activeWorkout;
+    // sets still showing but not ticked (or typed) won't be saved - say so first
+    if (force !== true) {
+      var unticked = 0;
+      w.exercises.forEach(function (ex) {
+        var last = findLastInstance(ex.name);
+        var planned = Math.max(ex.plannedSets || (last ? last.sets.length : (isHold(ex.name) ? 1 : 3)) || 3, (ex.sets || []).length);
+        var counted = (ex.sets || []).filter(function (st) { return st && (st.done || Number(st.reps) > 0); }).length;
+        if (counted > 0) unticked += Math.max(0, planned - counted);
+      });
+      if (unticked > 0) {
+        showConfirm(unticked + (unticked === 1 ? " set isn't" : " sets aren't") + " ticked",
+          "Unticked sets won't be saved. Go back and tick them, or finish without them.",
+          "Finish anyway", function () { finishWorkout(true); });
+        return;
+      }
+    }
     // a set counts if it was ticked OR simply filled in - typing the numbers is enough
     var cleanExercises = w.exercises.map(function (ex) {
       return { name: ex.name, sets: (ex.sets || []).filter(function (s) {
@@ -2493,13 +2550,13 @@
       '<div class="fire">\ud83d\udd25</div>' +
       '<h2>Workout Complete</h2>' +
       '<div class="finish-grid">' +
-      '<div><div class="stat-num fstat-num">' + fmtDuration(f.durationSec) + '</div><div class="fstat-label">Time</div></div>' +
+      (f.durationSec >= 60 ? '<div><div class="stat-num fstat-num">' + fmtDuration(f.durationSec) + '</div><div class="fstat-label">Time</div></div>' : '') +
       '<div><div class="stat-num fstat-num">' + f.sets + '</div><div class="fstat-label">Sets</div></div>' +
       '<div><div class="stat-num fstat-num">' + f.exercises + '</div><div class="fstat-label">Exercises</div></div>' +
       '</div>' +
       '<div class="stat-num finish-vol">' + Math.round(f.volume).toLocaleString() + ' kg</div>' +
       '<div class="finish-vol-lbl">Total Volume</div>' +
-      (f.kcal !== null && f.kcal !== undefined ? '<div class="finish-kcal">~' + f.kcal + ' kcal burned <span>(estimate)</span></div>' : '') +
+      (f.kcal !== null && f.kcal !== undefined && f.kcal >= 1 ? '<div class="finish-kcal">~' + f.kcal + ' kcal burned <span>(estimate)</span></div>' : '') +
       (f.prCount > 0 ? '<div class="pr-line">\ud83c\udfc6 ' + f.prCount + ' new PR' + (f.prCount > 1 ? 's' : '') + '</div>' : '') +
       '<button class="big-cta" id="finishDoneBtn">Done</button>' +
       (f.exNames && f.exNames.length ? '<button class="secondary" id="saveRoutineBtn" style="width:100%;margin-top:9px">Save as routine</button>' : '') +
