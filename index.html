@@ -1719,6 +1719,9 @@
     var has = {};
     lifting.forEach(function (k) { has[k] = true; });
     if (lifting.length >= 4) return "Full Body";
+    // Mostly leg sets = a legs day, even with a deadlift (which counts as Back) in it
+    var liftSets = lifting.reduce(function (n, k) { return n + counts[k]; }, 0);
+    if ((counts.Legs || 0) * 2 >= liftSets) return "Legs";
     if (has.Chest && (has.Shoulders || has.Arms) && !has.Back) return "Push";
     if (has.Back && !has.Chest) return "Pull";
     var sorted = lifting.sort(function (a, b) { return counts[b] - counts[a]; });
