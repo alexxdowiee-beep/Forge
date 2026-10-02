@@ -1595,7 +1595,9 @@
       var s = JSON.parse(localStorage.getItem('finance_settings') || 'null');
       if (!s || !s.relayUrl || !s.relayKey) return;
       var c = healthData();
-      if (c && Date.now() - (c.fetchedAt || 0) < 15 * 60000) return;
+      // ask again after 15 min - or after 1 min if the last answer had nothing in it yet
+      var hasData = c && c.days && Object.keys(c.days).length;
+      if (c && Date.now() - (c.fetchedAt || 0) < (hasData ? 15 : 1) * 60000) return;
       var base = String(s.relayUrl).trim().replace(/\/+$/, '');
       if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
       fetch(base + '/health', { headers: { 'X-Relay-Key': s.relayKey } })
