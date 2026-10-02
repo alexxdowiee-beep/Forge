@@ -1007,7 +1007,12 @@
     { name: "Stair Climber", muscle: "Cardio", hold: 20, unit: "min",
       setup: "Stand tall on the machine, shoulders back, core engaged. Hands resting lightly on the rails for balance only.",
       execute: "Take full steps, planting your whole foot on each step rather than just the toes. Drive through the heel and squeeze the glute at the top of each step. Keep an upright posture throughout.",
-      mistake: "Hanging off the handrails and leaning your body weight into them. It cuts the actual work dramatically. If you need to lean to keep up, slow the machine down." }
+      mistake: "Hanging off the handrails and leaning your body weight into them. It cuts the actual work dramatically. If you need to lean to keep up, slow the machine down." },
+
+    { name: "Hiking", muscle: "Cardio", hold: 60, unit: "min",
+      setup: "Boots or trail shoes laced firmly, pack straps snug so the weight sits on your hips, not your shoulders. Water, a layer and a plan for the time you'll be out.",
+      execute: "Keep a pace you could hold a conversation at. Shorten your stride on climbs and keep your weight over your feet; on descents bend the knees a little and take smaller, controlled steps. Use poles on steep or long downhills to take load off the knees.",
+      mistake: "Going out too fast on the first climb and paying for it all day. Start slower than feels necessary, and on the way down don't lock your knees or lean back, which is what makes them ache the next day." }
   ];
 
   // Mobility work. hold = default seconds per set. phase: "warmup" (dynamic) or "cooldown" (static).
@@ -1660,7 +1665,7 @@
   /* ---- history summarising ---- */
   // MET values (Compendium of Physical Activities). Resistance training sits ~5.0;
   // these drive a body-weight based estimate, never a measurement.
-  var MET_BY_NAME = { "Running": 9.8, "Cycling": 7.0, "Rowing": 7.0, "Jump Rope": 12.3, "Stair Climber": 9.0 };
+  var MET_BY_NAME = { "Running": 9.8, "Cycling": 7.0, "Rowing": 7.0, "Jump Rope": 12.3, "Stair Climber": 9.0, "Hiking": 6.0 };
   function metFor(name) {
     if (MET_BY_NAME[name]) return MET_BY_NAME[name];
     var m = muscleOf(name);
