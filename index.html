@@ -786,7 +786,12 @@
   .empty-state .emoji .ci { color: var(--ink-soft, var(--muted)); }
   .bw-line { display:flex; justify-content:space-between; align-items:center; width:100%; background:none; border:none; border-top:1px solid var(--border); margin-top:12px; padding:12px 0 0; font: inherit; font-size:14px; color: var(--muted); cursor:pointer; text-align:left; }
   .bw-line b { color: var(--ink); }
+  .steps-line { border-top:1px solid var(--border); margin-top:12px; padding-top:12px; font-size:14px; color: var(--muted); }
+  .steps-line b { color: var(--ink); }
   .bw-log { color: var(--accent); font-weight:700; }
+
+  .hbars { display:flex; gap:4px; align-items:flex-end; height:30px; margin-top:8px; }
+  .hbars i { flex:1; border-radius:2px; min-height:3px; }
 </style>
 </head>
 <body>
@@ -1578,6 +1583,43 @@
      bodyweight entry or weekly goal changes. See the "App Bundle: Data
      Sharing Spec" doc for the shared contract this follows. */
   var SUMMARY_VERSION = 1;
+
+  // ---- Steps and sleep from Samsung Health, via your relay's /health ----
+  // Samsung Health -> Health Connect -> "Health Connect Webhook" app -> relay.
+  // Shared by Forge (steps), Mind (sleep) and the Dashboard: same relay settings
+  // as Finance and one shared cache, so the relay is asked at most every 15 min.
+  var HEALTH_KEY = 'health_cache';
+  function healthData() { try { return JSON.parse(localStorage.getItem(HEALTH_KEY) || 'null'); } catch (e) { return null; } }
+  function refreshHealth(onNew) {
+    try {
+      var s = JSON.parse(localStorage.getItem('finance_settings') || 'null');
+      if (!s || !s.relayUrl || !s.relayKey) return;
+      var c = healthData();
+      if (c && Date.now() - (c.fetchedAt || 0) < 15 * 60000) return;
+      var base = String(s.relayUrl).trim().replace(/\/+$/, '');
+      if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
+      fetch(base + '/health', { headers: { 'X-Relay-Key': s.relayKey } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || !d.days) return;
+          d.fetchedAt = Date.now();
+          try { localStorage.setItem(HEALTH_KEY, JSON.stringify(d)); } catch (e) {}
+          if (onNew) onNew(d);
+        })
+        .catch(function () { /* offline or relay not updated yet - try again later */ });
+    } catch (e) {}
+  }
+  function healthLast7() {   // local dates, oldest first, ending today
+    var out = [], p = function (n) { return (n < 10 ? '0' : '') + n; };
+    for (var i = 6; i >= 0; i--) { var d = new Date(); d.setDate(d.getDate() - i); out.push(d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())); }
+    return out;
+  }
+  function healthBars(vals, colour, fadeLast) {
+    var max = Math.max.apply(null, vals.concat([1]));
+    return '<div class="hbars">' + vals.map(function (v, i) {
+      return '<i style="height:' + Math.max(4, Math.round(v / max * 100)) + '%;background:' + colour + (fadeLast && i === vals.length - 1 ? ';opacity:.55' : '') + '"></i>';
+    }).join('') + '</div>';
+  }
   function ymdOf(iso) { var d = new Date(iso), p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
   // PRs set in workouts dated on/after `since` (same rule as everywhere else).
   function prsSince(since) {
@@ -1626,7 +1668,13 @@
           bodyweightGoalKg: (state.goals && state.goals.bodyweight) || null,
           bodyweightHistory: (state.bodyweights || []).filter(function (b) { return Date.now() - new Date(b.date).getTime() < 120 * 864e5; })
                           .map(function (b) { return { date: ymdOf(b.date), kg: Number(b.weight) }; }).reverse(),
-          prsThisWeek: prsSince(startOfWeek(new Date()).getTime())
+          prsThisWeek: prsSince(startOfWeek(new Date()).getTime()),
+          // for the Dashboard's weekly review: each workout's date and the muscles it hit
+          weekLog: state.workouts.filter(function (w) { return Date.now() - new Date(w.date).getTime() < 70 * 864e5; })
+                     .map(function (w) {
+                       var m = {}; (w.exercises || []).forEach(function (e) { var g = muscleOf(e.name); if (g !== 'Cardio' && g !== 'Mobility') m[g] = 1; });
+                       return { date: ymdOf(w.date), name: sessionName(w), muscles: Object.keys(m) };
+                     })
         }
       }));
     } catch (e) {}
@@ -1944,6 +1992,18 @@
     }
     var streak = dayStreak();
     // body weight now sits as one line inside the This Week card
+    // steps from Samsung Health (only shows once data has arrived)
+    var stepsHtml = '', hd = healthData();
+    refreshHealth(function () { if (state.tab === 'home' && !state.activeWorkout) render(); });
+    if (hd && hd.days) {
+      var sDays = healthLast7(), sVals = sDays.map(function (k) { return (hd.days[k] || {}).steps || 0; });
+      if (sVals.some(Boolean)) {
+        var past = sVals.slice(0, 6).filter(Boolean), avg = past.length ? Math.round(past.reduce(function (a, b) { return a + b; }, 0) / past.length) : 0;
+        stepsHtml = '<div class="steps-line"><div class="row-between"><span>Steps today <b>' + sVals[6].toLocaleString() + '</b></span>' +
+          (avg ? '<span class="muted" style="font-size:12px">7-day avg ' + avg.toLocaleString() + '</span>' : '') + '</div>' +
+          healthBars(sVals, 'var(--accent)', true) + '</div>';
+      }
+    }
     var bwHtml = '<button class="bw-line" id="logBwBtn"><span>Body weight <b>' + (bw ? fmtW(bw.weight) + ' kg' : '\u2014') + '</b>' +
       (trend ? ' <span class="qs-trend">' + trend + '</span>' : '') + '</span><span class="bw-log">+ Log</span></button>';
 
@@ -1971,7 +2031,7 @@
         return '<div class="' + cls + '">' +
           '<div class="day-mark">' + (t ? t.letter : (i === todayIdx ? "\u00b7" : "")) + '</div>' +
           '<div class="day-lbl">' + dayLbls[i] + '</div></div>';
-      }).join("") + '</div>' + bwHtml +
+      }).join("") + '</div>' + bwHtml + stepsHtml +
       '</div>';
 
     // ---------- 1. muscle recovery ----------
