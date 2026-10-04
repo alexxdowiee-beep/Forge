@@ -1676,7 +1676,14 @@
                      .map(function (w) {
                        var m = {}; (w.exercises || []).forEach(function (e) { var g = muscleOf(e.name); if (g !== 'Cardio' && g !== 'Mobility') m[g] = 1; });
                        return { date: ymdOf(w.date), name: sessionName(w), muscles: Object.keys(m) };
-                     })
+                     }),
+          // for Fuel's "calories from activity": estimated workout kcal per day (needs body weight)
+          kcalByDate: (function () {
+            var out = {};
+            state.workouts.filter(function (w) { return Date.now() - new Date(w.date).getTime() < 70 * 864e5; })
+              .forEach(function (w) { var k = estimateCalories(w); if (k) out[ymdOf(w.date)] = (out[ymdOf(w.date)] || 0) + k; });
+            return out;
+          })()
         }
       }));
     } catch (e) {}
